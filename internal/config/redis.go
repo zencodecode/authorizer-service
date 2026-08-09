@@ -3,7 +3,7 @@ package config
 import (
 	"fmt"
 
-	"github.com/zencodecode/authorizer-service/pkg/enval"
+	"github.com/zencodecode/authorizer-service/pkg/envutil"
 )
 
 type Redis struct {
@@ -16,12 +16,12 @@ type Redis struct {
 }
 
 func LoadRedisConfig() (Redis, error) {
-	host := enval.Get("REDIS_HOST", "")
-	port := enval.GetInt("REDIS_PORT", 6379)
-	user := enval.Get("REDIS_USER", "")
-	password := enval.Get("REDIS_PASSWORD", "")
-	tls := enval.Get("REDIS_TLS", "")
-	prefix := enval.Get("REDIS_PREFIX", "")
+	host := envutil.Get("REDIS_HOST", "")
+	port := envutil.GetInt("REDIS_PORT", 6379)
+	user := envutil.Get("REDIS_USER", "")
+	password := envutil.Get("REDIS_PASSWORD", "")
+	tls := envutil.Get("REDIS_TLS", "")
+	prefix := envutil.Get("REDIS_PREFIX", "")
 
 	rd := Redis{
 		Host:     host,

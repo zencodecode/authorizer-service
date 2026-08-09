@@ -1,12 +1,16 @@
 package entity
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type Application struct {
-	ID          string
+	ID          uuid.UUID
 	Code        string
 	Name        string
-	Description string
+	Description *string
 	Metadata    map[string]any
 	CreatedAt   time.Time
 	UpdatedAt   time.Time

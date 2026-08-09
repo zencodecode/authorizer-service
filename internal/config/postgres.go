@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/zencodecode/authorizer-service/pkg/enval"
+	"github.com/zencodecode/authorizer-service/pkg/envutil"
 )
 
 type Postgres struct {
@@ -22,16 +22,16 @@ type Postgres struct {
 }
 
 func LoadPostgresConfig() (Postgres, error) {
-	debugMode := enval.GetAsBool("DB_DEBUG", false)
-	host := enval.Get("POSTGRES_HOST", "")
-	port := enval.GetInt("POSTGRES_PORT", 5432)
-	user := enval.Get("POSTGRES_USER", "")
-	password := enval.Get("POSTGRES_PASSWORD", "")
-	database := enval.Get("POSTGRES_DATABASE", "")
-	sslMode := enval.Get("POSTGRES_SSLMODE", "disable")
-	maxIdleConnection := enval.GetInt("POSTGRES_MAX_IDLE_CONNECTION", 10)
-	maxOpenConnection := enval.GetInt("POSTGRES_MAX_OPEN_CONNECTION", 100)
-	connectionMaxLifetimeInSecond := enval.GetDuration("POSTGRES_CONNECTION_MAX_LIFETIME_IN_SECOND", 3600*time.Second)
+	debugMode := envutil.GetAsBool("DB_DEBUG", false)
+	host := envutil.Get("POSTGRES_HOST", "")
+	port := envutil.GetInt("POSTGRES_PORT", 5432)
+	user := envutil.Get("POSTGRES_USER", "")
+	password := envutil.Get("POSTGRES_PASSWORD", "")
+	database := envutil.Get("POSTGRES_DATABASE", "")
+	sslMode := envutil.Get("POSTGRES_SSLMODE", "disable")
+	maxIdleConnection := envutil.GetInt("POSTGRES_MAX_IDLE_CONNECTION", 10)
+	maxOpenConnection := envutil.GetInt("POSTGRES_MAX_OPEN_CONNECTION", 100)
+	connectionMaxLifetimeInSecond := envutil.GetDuration("POSTGRES_CONNECTION_MAX_LIFETIME_IN_SECOND", 3600*time.Second)
 
 	logMode := 0
 	if debugMode == true {

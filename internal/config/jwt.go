@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zencodecode/authorizer-service/pkg/enval"
+	"github.com/zencodecode/authorizer-service/pkg/envutil"
 	"github.com/zencodecode/authorizer-service/pkg/rsakey"
 )
 
@@ -28,10 +28,10 @@ type JWT struct {
 }
 
 func LoadJWTConfig() (JWT, error) {
-	privateKeyPath := enval.Get("JWT_PRIVATE_KEY_PATH", defaultPrivateKeyPath)
-	publicKeyPath := enval.Get("JWT_PUBLIC_KEY_PATH", defaultPublicKeyPath)
-	tokenExpiry := enval.GetDuration("JWT_TOKEN_EXPIRY", 15*time.Minute)
-	refreshExpiry := enval.GetDuration("JWT_REFRESH_EXPIRY", 7*24*time.Hour)
+	privateKeyPath := envutil.Get("JWT_PRIVATE_KEY_PATH", defaultPrivateKeyPath)
+	publicKeyPath := envutil.Get("JWT_PUBLIC_KEY_PATH", defaultPublicKeyPath)
+	tokenExpiry := envutil.GetDuration("JWT_TOKEN_EXPIRY", 15*time.Minute)
+	refreshExpiry := envutil.GetDuration("JWT_REFRESH_EXPIRY", 7*24*time.Hour)
 
 	if privateKeyPath == "" || publicKeyPath == "" {
 		return JWT{}, fmt.Errorf("JWT_PRIVATE_KEY_PATH and JWT_PUBLIC_KEY_PATH must be set")
@@ -60,12 +60,12 @@ func LoadJWTConfig() (JWT, error) {
 }
 
 func loadPrivateKeyFromEnvOrFile() (*rsa.PrivateKey, error) {
-	if strKey := enval.Get("JWT_PRIVATE_KEY", ""); strKey != "" {
+	if strKey := envutil.Get("JWT_PRIVATE_KEY", ""); strKey != "" {
 		return rsakey.ParsePrivateKey([]byte(strKey))
 	}
 
 	paths := []string{
-		enval.Get("JWT_PRIVATE_KEY_PATH", defaultPrivateKeyPath),
+		envutil.Get("JWT_PRIVATE_KEY_PATH", defaultPrivateKeyPath),
 		defaultPrivateKeyPath,
 	}
 

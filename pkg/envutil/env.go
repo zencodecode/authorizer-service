@@ -1,4 +1,4 @@
-package enval
+package envutil
 
 import (
 	"os"
