@@ -1,3 +1,3 @@
--- +migrate Down
-DROP EXTENSION IF EXISTS citext;
-DROP EXTENSION IF EXISTS pgcrypto;
+DROP FUNCTION IF EXISTS trigger_set_updated_at();
+DROP EXTENSION IF EXISTS "citext";
+DROP EXTENSION IF EXISTS "pgcrypto";
