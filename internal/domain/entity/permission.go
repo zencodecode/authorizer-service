@@ -1,13 +1,17 @@
 package entity
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type Permission struct {
-	ID          string
-	Code        string
-	Description *string
-	Version     int
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	DeletedAt   *time.Time
+	ID            uuid.UUID
+	ApplicationID uuid.UUID
+	Slug          string
+	Resource      string
+	Action        string
+	Description   *string
+	CreatedAt     time.Time
 }

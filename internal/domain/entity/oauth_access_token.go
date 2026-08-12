@@ -6,14 +6,14 @@ import (
 	"github.com/google/uuid"
 )
 
-type Role struct {
+type OAuthAccessToken struct {
 	ID             uuid.UUID
+	TokenHash      string
+	UserID         uuid.UUID
 	OrganizationID *uuid.UUID
 	ApplicationID  uuid.UUID
-	Name           string
-	Slug           string
-	Description    *string
-	IsSystem       bool
+	Scopes         []string
+	ExpiresAt      time.Time
+	RevokedAt      *time.Time
 	CreatedAt      time.Time
-	UpdatedAt      time.Time
 }

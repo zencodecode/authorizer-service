@@ -1,15 +1,13 @@
 package model
 
 import (
-	"time"
-
+	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 )
 
 type RolePermission struct {
-	RoleID       string    `gorm:"column:role_id"`
-	PermissionID string    `gorm:"column:permission_id"`
-	CreatedAt    time.Time `gorm:"column:created_at"`
+	RoleID       uuid.UUID `gorm:"type:uuid;primaryKey"`
+	PermissionID uuid.UUID `gorm:"type:uuid;primaryKey"`
 }
 
 func (RolePermission) TableName() string {
@@ -17,19 +15,15 @@ func (RolePermission) TableName() string {
 }
 
 func RolePermissionFromEntity(e *entity.RolePermission) *RolePermission {
-	m := &RolePermission{
+	return &RolePermission{
 		RoleID:       e.RoleID,
 		PermissionID: e.PermissionID,
-		CreatedAt:    e.CreatedAt,
 	}
-	return m
 }
 
 func (m *RolePermission) ToEntity() *entity.RolePermission {
-	e := &entity.RolePermission{
+	return &entity.RolePermission{
 		RoleID:       m.RoleID,
 		PermissionID: m.PermissionID,
-		CreatedAt:    m.CreatedAt,
 	}
-	return e
 }

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -8,14 +9,18 @@ import (
 )
 
 type Application struct {
-	ID          uuid.UUID      `gorm:"type:uuid;primaryKey"`
-	Code        string         `gorm:"type:text;not null"`
-	Name        string         `gorm:"type:text;not null"`
-	Description *string        `gorm:"type:text"`
-	Metadata    map[string]any `gorm:"column:metadata;"`
-	CreatedAt   time.Time      `gorm:"column:created_at;"`
-	UpdatedAt   time.Time      `gorm:"column:updated_at;"`
-	DeletedAt   *time.Time     `gorm:"column:deleted_at;"`
+	ID                   uuid.UUID       `gorm:"type:uuid;primaryKey"`
+	Name                 string          `gorm:"type:varchar(255);not null"`
+	Slug                 string          `gorm:"type:varchar(255);not null;uniqueIndex"`
+	ClientID             string          `gorm:"type:varchar(255);not null;uniqueIndex"`
+	ClientSecretHash     string          `gorm:"type:varchar(255);not null"`
+	RedirectURIs         json.RawMessage `gorm:"type:jsonb;not null;default:'[]'"`
+	AllowedGrantTypes    json.RawMessage `gorm:"type:jsonb;not null;default:'[\"authorization_code\",\"refresh_token\"]'"`
+	RequiresOrganization bool            `gorm:"not null;default:true"`
+	Metadata             json.RawMessage `gorm:"type:jsonb"`
+	IsActive             bool            `gorm:"not null;default:true"`
+	CreatedAt            time.Time       `gorm:"not null;default:now()"`
+	UpdatedAt            time.Time       `gorm:"not null;default:now()"`
 }
 
 func (Application) TableName() string {
@@ -23,39 +28,54 @@ func (Application) TableName() string {
 }
 
 func ApplicationFromEntity(e *entity.Application) *Application {
-	m := &Application{
-		ID:          e.ID,
-		Code:        e.Code,
-		Name:        e.Name,
-		Description: e.Description,
-		Metadata:    e.Metadata,
-		CreatedAt:   e.CreatedAt,
-		UpdatedAt:   e.UpdatedAt,
+	redirectURIs, _ := json.Marshal(e.RedirectURIs)
+	allowedGrantTypes, _ := json.Marshal(e.AllowedGrantTypes)
+
+	var metadata json.RawMessage
+	if e.Metadata != nil {
+		metadata, _ = json.Marshal(e.Metadata)
 	}
-	if e.Description != nil {
-		m.Description = e.Description
+
+	return &Application{
+		ID:                   e.ID,
+		Name:                 e.Name,
+		Slug:                 e.Slug,
+		ClientID:             e.ClientID,
+		ClientSecretHash:     e.ClientSecretHash,
+		RedirectURIs:         redirectURIs,
+		AllowedGrantTypes:    allowedGrantTypes,
+		RequiresOrganization: e.RequiresOrganization,
+		Metadata:             metadata,
+		IsActive:             e.IsActive,
+		CreatedAt:            e.CreatedAt,
+		UpdatedAt:            e.UpdatedAt,
 	}
-	if e.DeletedAt != nil && !e.DeletedAt.IsZero() {
-		m.DeletedAt = e.DeletedAt
-	}
-	return m
 }
 
 func (m *Application) ToEntity() *entity.Application {
-	e := &entity.Application{
-		ID:          m.ID,
-		Code:        m.Code,
-		Name:        m.Name,
-		Description: m.Description,
-		Metadata:    m.Metadata,
-		CreatedAt:   m.CreatedAt,
-		UpdatedAt:   m.UpdatedAt,
+	var redirectURIs []string
+	_ = json.Unmarshal(m.RedirectURIs, &redirectURIs)
+
+	var allowedGrantTypes []string
+	_ = json.Unmarshal(m.AllowedGrantTypes, &allowedGrantTypes)
+
+	var metadata map[string]any
+	if m.Metadata != nil {
+		_ = json.Unmarshal(m.Metadata, &metadata)
 	}
-	if m.Description != nil {
-		e.Description = m.Description
+
+	return &entity.Application{
+		ID:                   m.ID,
+		Name:                 m.Name,
+		Slug:                 m.Slug,
+		ClientID:             m.ClientID,
+		ClientSecretHash:     m.ClientSecretHash,
+		RedirectURIs:         redirectURIs,
+		AllowedGrantTypes:    allowedGrantTypes,
+		RequiresOrganization: m.RequiresOrganization,
+		Metadata:             metadata,
+		IsActive:             m.IsActive,
+		CreatedAt:            m.CreatedAt,
+		UpdatedAt:            m.UpdatedAt,
 	}
-	if m.DeletedAt != nil {
-		e.DeletedAt = m.DeletedAt
-	}
-	return e
 }

@@ -1,9 +1,8 @@
 package entity
 
-import "time"
+import "github.com/google/uuid"
 
 type RolePermission struct {
-	RoleID       string
-	PermissionID string
-	CreatedAt    time.Time
+	RoleID       uuid.UUID
+	PermissionID uuid.UUID
 }

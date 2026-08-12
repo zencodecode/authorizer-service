@@ -1,9 +1,16 @@
 package entity
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type UserRole struct {
-	UserID    string    `gorm:"column:user_id"`
-	RoleID    string    `gorm:"column:role_id"`
-	CreatedAt time.Time `gorm:"column:created_at"`
+	ID             uuid.UUID
+	OrganizationID *uuid.UUID
+	UserID         uuid.UUID
+	RoleID         uuid.UUID
+	AssignedAt     time.Time
+	AssignedBy     *uuid.UUID
 }

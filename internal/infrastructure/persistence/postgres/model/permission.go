@@ -3,17 +3,18 @@ package model
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 )
 
 type Permission struct {
-	ID          string     `gorm:"column:id;primaryKey"`
-	Code        string     `gorm:"column:code"`
-	Description *string    `gorm:"column:description"`
-	Version     int        `gorm:"column:version"`
-	CreatedAt   time.Time  `gorm:"column:created_at"`
-	UpdatedAt   time.Time  `gorm:"column:updated_at"`
-	DeletedAt   *time.Time `gorm:"column:deleted_at"`
+	ID            uuid.UUID `gorm:"type:uuid;primaryKey"`
+	ApplicationID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_app_perm_slug"`
+	Slug          string    `gorm:"type:varchar(255);not null;uniqueIndex:idx_app_perm_slug"`
+	Resource      string    `gorm:"type:varchar(255);not null"`
+	Action        string    `gorm:"type:varchar(255);not null"`
+	Description   *string   `gorm:"type:text"`
+	CreatedAt     time.Time `gorm:"not null;default:now()"`
 }
 
 func (Permission) TableName() string {
@@ -21,37 +22,25 @@ func (Permission) TableName() string {
 }
 
 func PermissionFromEntity(e *entity.Permission) *Permission {
-	m := &Permission{
-		ID:          e.ID,
-		Code:        e.Code,
-		Description: e.Description,
-		Version:     e.Version,
-		CreatedAt:   e.CreatedAt,
-		UpdatedAt:   e.UpdatedAt,
+	return &Permission{
+		ID:            e.ID,
+		ApplicationID: e.ApplicationID,
+		Slug:          e.Slug,
+		Resource:      e.Resource,
+		Action:        e.Action,
+		Description:   e.Description,
+		CreatedAt:     e.CreatedAt,
 	}
-	if e.Description != nil {
-		m.Description = e.Description
-	}
-	if e.DeletedAt != nil && !e.DeletedAt.IsZero() {
-		m.DeletedAt = e.DeletedAt
-	}
-	return m
 }
 
 func (m *Permission) ToEntity() *entity.Permission {
-	e := &entity.Permission{
-		ID:          m.ID,
-		Code:        m.Code,
-		Description: m.Description,
-		Version:     m.Version,
-		CreatedAt:   m.CreatedAt,
-		UpdatedAt:   m.UpdatedAt,
+	return &entity.Permission{
+		ID:            m.ID,
+		ApplicationID: m.ApplicationID,
+		Slug:          m.Slug,
+		Resource:      m.Resource,
+		Action:        m.Action,
+		Description:   m.Description,
+		CreatedAt:     m.CreatedAt,
 	}
-	if m.Description != nil {
-		e.Description = m.Description
-	}
-	if m.DeletedAt != nil {
-		e.DeletedAt = m.DeletedAt
-	}
-	return e
 }

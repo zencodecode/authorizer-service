@@ -8,18 +8,15 @@ import (
 )
 
 type User struct {
-	ID            uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Email         string    `gorm:"type:citext;uniqueIndex;not null"`
-	Username      string    `gorm:"type:varchar(50);uniqueIndex;not null"`
-	Password      string    `gorm:"type:text;not null"`
-	FullName      string    `gorm:"type:varchar(100)"`
-	Phone         *string   `gorm:"type:varchar(20)"`
-	IsActive      bool      `gorm:"type:bool;default:true;not null"`
-	EmailVerified bool      `gorm:"type:bool;default:false;not null"`
-	PhoneVerified bool      `gorm:"type:bool;default:false;not null"`
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	DeletedAt     *time.Time
+	ID              uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	Email           string     `gorm:"type:citext;not null;uniqueIndex"`
+	PasswordHash    string     `gorm:"type:varchar(255);not null"`
+	Name            string     `gorm:"type:varchar(255);not null"`
+	Status          string     `gorm:"type:varchar(50);not null;default:'pending_verification'"`
+	EmailVerifiedAt *time.Time `gorm:"type:timestamptz"`
+	CreatedAt       time.Time  `gorm:"not null;default:now()"`
+	UpdatedAt       time.Time  `gorm:"not null;default:now()"`
+	DeletedAt       *time.Time `gorm:"index"`
 }
 
 func (User) TableName() string {
@@ -27,42 +24,29 @@ func (User) TableName() string {
 }
 
 func UserFromEntity(e *entity.User) *User {
-	m := &User{
-		ID:            e.ID,
-		Email:         e.Email,
-		Username:      e.Username,
-		Password:      e.Password,
-		FullName:      e.FullName,
-		Phone:         e.Phone,
-		IsActive:      e.IsActive,
-		EmailVerified: e.EmailVerified,
-		PhoneVerified: e.PhoneVerified,
-		CreatedAt:     e.CreatedAt,
-		UpdatedAt:     e.UpdatedAt,
+	return &User{
+		ID:              e.ID,
+		Email:           e.Email,
+		PasswordHash:    e.PasswordHash,
+		Name:            e.Name,
+		Status:          e.Status,
+		EmailVerifiedAt: e.EmailVerifiedAt,
+		CreatedAt:       e.CreatedAt,
+		UpdatedAt:       e.UpdatedAt,
+		DeletedAt:       e.DeletedAt,
 	}
-	if e.DeletedAt != nil && !e.DeletedAt.IsZero() {
-		m.DeletedAt = e.DeletedAt
-	}
-	return m
 }
 
 func (m *User) ToEntity() *entity.User {
-	e := &entity.User{
-		ID:            m.ID,
-		Email:         m.Email,
-		Username:      m.Username,
-		Password:      m.Password,
-		FullName:      m.FullName,
-		Phone:         m.Phone,
-		IsActive:      m.IsActive,
-		EmailVerified: m.EmailVerified,
-		PhoneVerified: m.PhoneVerified,
-		CreatedAt:     m.CreatedAt,
-		UpdatedAt:     m.UpdatedAt,
-		DeletedAt:     m.DeletedAt,
+	return &entity.User{
+		ID:              m.ID,
+		Email:           m.Email,
+		PasswordHash:    m.PasswordHash,
+		Name:            m.Name,
+		Status:          m.Status,
+		EmailVerifiedAt: m.EmailVerifiedAt,
+		CreatedAt:       m.CreatedAt,
+		UpdatedAt:       m.UpdatedAt,
+		DeletedAt:       m.DeletedAt,
 	}
-	if m.DeletedAt != nil {
-		e.DeletedAt = m.DeletedAt
-	}
-	return e
 }

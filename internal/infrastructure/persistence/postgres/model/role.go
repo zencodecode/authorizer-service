@@ -3,18 +3,20 @@ package model
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 )
 
 type Role struct {
-	ID            string     `gorm:"column:id;primaryKey"`
-	ApplicationID string     `gorm:"column:application_id"`
-	Code          string     `gorm:"column:code"`
-	Name          string     `gorm:"column:name"`
-	Description   *string    `gorm:"column:description"`
-	CreatedAt     time.Time  `gorm:"column:created_at"`
-	UpdatedAt     time.Time  `gorm:"column:updated_at"`
-	DeletedAt     *time.Time `gorm:"column:deleted_at"`
+	ID             uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	OrganizationID *uuid.UUID `gorm:"type:uuid;uniqueIndex:idx_org_app_role_slug"`
+	ApplicationID  uuid.UUID  `gorm:"type:uuid;not null;uniqueIndex:idx_org_app_role_slug"`
+	Name           string     `gorm:"type:varchar(255);not null"`
+	Slug           string     `gorm:"type:varchar(255);not null;uniqueIndex:idx_org_app_role_slug"`
+	Description    *string    `gorm:"type:text"`
+	IsSystem       bool       `gorm:"not null;default:false"`
+	CreatedAt      time.Time  `gorm:"not null;default:now()"`
+	UpdatedAt      time.Time  `gorm:"not null;default:now()"`
 }
 
 func (Role) TableName() string {
@@ -22,35 +24,29 @@ func (Role) TableName() string {
 }
 
 func RoleFromEntity(e *entity.Role) *Role {
-	m := &Role{
-		ID:        e.ID,
-		Code:      e.Code,
-		Name:      e.Name,
-		CreatedAt: e.CreatedAt,
-		UpdatedAt: e.UpdatedAt,
+	return &Role{
+		ID:             e.ID,
+		OrganizationID: e.OrganizationID,
+		ApplicationID:  e.ApplicationID,
+		Name:           e.Name,
+		Slug:           e.Slug,
+		Description:    e.Description,
+		IsSystem:       e.IsSystem,
+		CreatedAt:      e.CreatedAt,
+		UpdatedAt:      e.UpdatedAt,
 	}
-	if e.Description != nil {
-		m.Description = e.Description
-	}
-	if e.DeletedAt != nil && !e.DeletedAt.IsZero() {
-		m.DeletedAt = e.DeletedAt
-	}
-	return m
 }
 
 func (m *Role) ToEntity() *entity.Role {
-	e := &entity.Role{
-		ID:        m.ID,
-		Code:      m.Code,
-		Name:      m.Name,
-		CreatedAt: m.CreatedAt,
-		UpdatedAt: m.UpdatedAt,
+	return &entity.Role{
+		ID:             m.ID,
+		OrganizationID: m.OrganizationID,
+		ApplicationID:  m.ApplicationID,
+		Name:           m.Name,
+		Slug:           m.Slug,
+		Description:    m.Description,
+		IsSystem:       m.IsSystem,
+		CreatedAt:      m.CreatedAt,
+		UpdatedAt:      m.UpdatedAt,
 	}
-	if m.Description != nil {
-		e.Description = m.Description
-	}
-	if m.DeletedAt != nil {
-		e.DeletedAt = m.DeletedAt
-	}
-	return e
 }
