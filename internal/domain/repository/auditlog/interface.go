@@ -1,0 +1,15 @@
+package auditlog
+
+import (
+	"context"
+
+	"github.com/zencodecode/authorizer-service/internal/domain/entity"
+)
+
+type Repository interface {
+	Create(ctx context.Context, log *entity.AuditLog) error
+	GetByID(ctx context.Context, id string) (*entity.AuditLog, error)
+	ListByOrganization(ctx context.Context, organizationID string, limit, offset int) ([]*entity.AuditLog, error)
+	ListByUser(ctx context.Context, actorUserID string, limit, offset int) ([]*entity.AuditLog, error)
+	ListByApplication(ctx context.Context, applicationID string, limit, offset int) ([]*entity.AuditLog, error)
+}

@@ -7,10 +7,10 @@ import (
 )
 
 type Repository interface {
-	Assign(ctx context.Context, userID, roleID string) error
-	Revoke(ctx context.Context, userID, roleID string) error
-	Replace(ctx context.Context, userID string, roleIDs []string) error
-	GetRolesByUserID(ctx context.Context, userID string) ([]*entity.Role, error)
-	GetUsersByRoleID(ctx context.Context, roleID string) ([]*entity.User, error)
-	HasRole(ctx context.Context, userID, roleID string) (bool, error)
+	AssignRole(ctx context.Context, userRole *entity.UserRole) error
+	RevokeRole(ctx context.Context, userID, organizationID, roleID string) error
+	HasRole(ctx context.Context, userID, organizationID, roleID string) (bool, error)
+	ListRolesByUser(ctx context.Context, userID string, organizationID *string) ([]*entity.Role, error)
+	ListUsersByRole(ctx context.Context, roleID string, limit, offset int) ([]*entity.User, error)
+	ListPermissionsByUser(ctx context.Context, userID, applicationID string, organizationID *string) ([]*entity.Permission, error)
 }

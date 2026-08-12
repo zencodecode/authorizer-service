@@ -7,8 +7,9 @@ import (
 )
 
 type Repository interface {
-	Grant(ctx context.Context, roleID, permissionID string) error
-	Revoke(ctx context.Context, roleID, permissionID string) error
-	Replace(ctx context.Context, roleID string, permissionIDs []string) error
-	GetPermissionsByRoleID(ctx context.Context, roleID string) ([]*entity.Permission, error)
+	AssignPermission(ctx context.Context, roleID, permissionID string) error
+	RevokePermission(ctx context.Context, roleID, permissionID string) error
+	HasPermission(ctx context.Context, roleID, permissionID string) (bool, error)
+	ListPermissionsByRole(ctx context.Context, roleID string) ([]*entity.Permission, error)
+	ListRolesByPermission(ctx context.Context, permissionID string) ([]*entity.Role, error)
 }
