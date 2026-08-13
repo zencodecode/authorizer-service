@@ -46,9 +46,9 @@ func (r *organizationApplicationRepository) GetByOrganizationAndApplication(
 
 func (r *organizationApplicationRepository) SetActive(ctx context.Context, organizationID, applicationID string, isActive bool) error {
 	result := r.db.WithContext(ctx).
-		Model(&entity.OrganizationApplication{}).
+		Model(&model.OrganizationApplication{}).
 		Where("organization_id = ? AND application_id = ?", organizationID, applicationID).
-		Update("is_active", true)
+		Update("is_active", isActive)
 
 	if result.RowsAffected == 0 {
 		return gorm.ErrRecordNotFound

@@ -67,7 +67,7 @@ func (r *applicationScopeRepository) Delete(ctx context.Context, id string) erro
 
 func (r *applicationScopeRepository) ListByApplication(ctx context.Context, applicationID string) ([]*entity.ApplicationScope, error) {
 	var scopesModel []model.ApplicationScope
-	result := r.db.WithContext(ctx).Find(&scopesModel)
+	result := r.db.WithContext(ctx).Where("application_id = ?", applicationID).Find(&scopesModel)
 	if result.Error != nil {
 		return nil, result.Error
 	}

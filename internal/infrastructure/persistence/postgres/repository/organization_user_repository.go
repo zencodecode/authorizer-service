@@ -50,7 +50,7 @@ func (r *organizationUserRepository) UpdateStatus(
 	status string,
 ) error {
 	result := r.db.WithContext(ctx).
-		Model(&entity.OrganizationUser{}).
+		Model(&model.OrganizationUser{}).
 		Where("organization_id = ? AND user_id = ?", organizationID, userID).
 		Update("status", status)
 
