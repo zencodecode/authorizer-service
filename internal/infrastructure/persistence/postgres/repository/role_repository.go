@@ -39,7 +39,9 @@ func (r *roleRepository) GetByID(ctx context.Context, id string) (*entity.Role, 
 
 func (r *roleRepository) GetBySlug(ctx context.Context, organizationID *string, applicationID, slug string) (*entity.Role, error) {
 	var roleModel model.Role
-	result := r.db.WithContext(ctx).Where("slug = ?", slug).First(&roleModel)
+	result := r.db.WithContext(ctx).
+		Where("organization_id = ? AND application_id = ? AND slug = ?", organizationID, applicationID, slug).
+		First(&roleModel)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
