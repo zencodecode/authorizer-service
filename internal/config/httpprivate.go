@@ -8,7 +8,7 @@ import (
 	"github.com/zencodecode/authorizer-service/pkg/envutil"
 )
 
-type HttpPrivate struct {
+type HTTPPrivate struct {
 	Environment string
 	GinMode     string
 	Port        string
@@ -16,7 +16,7 @@ type HttpPrivate struct {
 	Cors        []string
 }
 
-func LoadHttpPrivateConfig() (HttpPrivate, error) {
+func LoadHTTPPrivateConfig() (HTTPPrivate, error) {
 	env := envutil.Get("ENVIRONMENT", "production")
 	corsOrigins := envutil.Get("CORS", "")
 	port := envutil.Get("HTTP_PRIVATE_PORT", "8080")
@@ -28,14 +28,14 @@ func LoadHttpPrivateConfig() (HttpPrivate, error) {
 	}
 
 	if env == "production" && corsOrigins == "" {
-		return HttpPrivate{}, fmt.Errorf("CORS must be configured in production")
+		return HTTPPrivate{}, fmt.Errorf("CORS must be configured in production")
 	}
 
 	if corsOrigins == "" {
 		corsOrigins = "*"
 	}
 
-	httpPrivate := HttpPrivate{
+	httpPrivate := HTTPPrivate{
 		Environment: env,
 		GinMode:     ginMode,
 		Port:        port,
@@ -44,13 +44,13 @@ func LoadHttpPrivateConfig() (HttpPrivate, error) {
 	}
 
 	if err := httpPrivate.Validate(); err != nil {
-		return HttpPrivate{}, fmt.Errorf("invalid http private config: %w", err)
+		return HTTPPrivate{}, fmt.Errorf("invalid http private config: %w", err)
 	}
 
 	return httpPrivate, nil
 }
 
-func (h *HttpPrivate) Validate() error {
+func (h *HTTPPrivate) Validate() error {
 	if h.Environment == "" {
 		return fmt.Errorf("environment is required")
 	}

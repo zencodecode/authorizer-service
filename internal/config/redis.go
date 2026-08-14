@@ -11,7 +11,7 @@ type Redis struct {
 	Port     int
 	User     string
 	Password string
-	Tls      string
+	TLS      string
 	Prefix   string
 }
 
@@ -28,7 +28,7 @@ func LoadRedisConfig() (Redis, error) {
 		Port:     port,
 		User:     user,
 		Password: password,
-		Tls:      tls,
+		TLS:      tls,
 		Prefix:   prefix,
 	}
 

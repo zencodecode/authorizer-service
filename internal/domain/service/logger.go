@@ -1,7 +1,7 @@
 package service
 
 // Fields represents structured log fields
-type Fields map[string]interface{}
+type Fields map[string]any
 
 // Logger defines the interface for application logging
 // This interface allows the delivery layer to depend on logging

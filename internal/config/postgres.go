@@ -34,7 +34,7 @@ func LoadPostgresConfig() (Postgres, error) {
 	connectionMaxLifetimeInSecond := envutil.GetDuration("POSTGRES_CONNECTION_MAX_LIFETIME_IN_SECOND", 3600*time.Second)
 
 	logMode := 0
-	if debugMode == true {
+	if debugMode {
 		logMode = 3
 	}
 

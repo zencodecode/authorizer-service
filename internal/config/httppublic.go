@@ -8,7 +8,7 @@ import (
 	"github.com/zencodecode/authorizer-service/pkg/envutil"
 )
 
-type HttpPublic struct {
+type HTTPPublic struct {
 	Environment string
 	GinMode     string
 	Port        string
@@ -16,7 +16,7 @@ type HttpPublic struct {
 	Cors        []string
 }
 
-func LoadHttpPublicConfig() (HttpPublic, error) {
+func LoadHTTPPublicConfig() (HTTPPublic, error) {
 	env := envutil.Get("ENVIRONMENT", "production")
 	corsOrigins := envutil.Get("CORS", "")
 	port := envutil.Get("HTTP_PUBLIC_PORT", "8181")
@@ -28,14 +28,14 @@ func LoadHttpPublicConfig() (HttpPublic, error) {
 	}
 
 	if env == "production" && corsOrigins == "" {
-		return HttpPublic{}, fmt.Errorf("CORS must be configured in production")
+		return HTTPPublic{}, fmt.Errorf("CORS must be configured in production")
 	}
 
 	if corsOrigins == "" {
 		corsOrigins = "*"
 	}
 
-	httpPublic := HttpPublic{
+	httpPublic := HTTPPublic{
 		Environment: env,
 		GinMode:     ginMode,
 		Port:        port,
@@ -44,13 +44,13 @@ func LoadHttpPublicConfig() (HttpPublic, error) {
 	}
 
 	if err := httpPublic.Validate(); err != nil {
-		return HttpPublic{}, fmt.Errorf("invalid http private config: %w", err)
+		return HTTPPublic{}, fmt.Errorf("invalid http public config: %w", err)
 	}
 
 	return httpPublic, nil
 }
 
-func (h *HttpPublic) Validate() error {
+func (h *HTTPPublic) Validate() error {
 	if h.Environment == "" {
 		return fmt.Errorf("environment is required")
 	}

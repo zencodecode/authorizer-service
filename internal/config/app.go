@@ -17,7 +17,7 @@ type (
 	}
 
 	InterfacesConfig struct {
-		HttpPrivate HttpPrivate
+		HTTPPrivate HTTPPrivate
 	}
 )
 
@@ -37,17 +37,16 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
-	httpCfg, err := LoadHttpPrivateConfig()
+	httpCfg, err := LoadHTTPPrivateConfig()
 	if err != nil {
 		return Config{}, err
 	}
 
 	return Config{
-		// GinMode:  helper.GetEnv("GIN_MODE", "release"),
 		Database: DatabaseConfig{Postgres: pgCfg, Redis: rdCfg},
 		Auth:     AuthConfig{JWT: jwtCfg},
 		Interfaces: InterfacesConfig{
-			HttpPrivate: httpCfg,
+			HTTPPrivate: httpCfg,
 		},
 	}, nil
 }
