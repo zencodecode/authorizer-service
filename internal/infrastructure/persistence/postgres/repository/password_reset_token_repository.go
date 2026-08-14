@@ -32,7 +32,7 @@ func (r *passwordResetTokenRepository) GetByTokenHash(ctx context.Context, token
 		Where("token_hash = ?", tokenHash).
 		First(&tokenModel)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, passwordresettoken.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error

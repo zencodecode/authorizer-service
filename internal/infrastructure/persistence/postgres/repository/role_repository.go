@@ -29,7 +29,7 @@ func (r *roleRepository) GetByID(ctx context.Context, id string) (*entity.Role, 
 	var roleModel model.Role
 	result := r.db.WithContext(ctx).Where("id = ?", id).First(&roleModel)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, role.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error
@@ -43,7 +43,7 @@ func (r *roleRepository) GetBySlug(ctx context.Context, organizationID *string, 
 		Where("organization_id = ? AND application_id = ? AND slug = ?", organizationID, applicationID, slug).
 		First(&roleModel)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, role.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error

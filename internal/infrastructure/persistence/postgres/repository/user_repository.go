@@ -29,7 +29,7 @@ func (r *userRepository) GetByID(ctx context.Context, id string) (*entity.User, 
 	var userModel model.User
 	result := r.db.WithContext(ctx).Where("id = ?", id).First(&userModel)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, user.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error
@@ -41,7 +41,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*entity.
 	var userModel model.User
 	result := r.db.WithContext(ctx).Where("email = ?", email).First(&userModel)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, user.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error

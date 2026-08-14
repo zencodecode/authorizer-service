@@ -40,7 +40,7 @@ func (r *rolePermissionRepository) HasPermission(ctx context.Context, roleID, pe
 		Where("role_id = ? AND permission_id = ?", roleID, permissionID).
 		First(&rolePermModel)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return false, nil
+		return false, rolepermission.ErrNotFound
 	}
 	if result.Error != nil {
 		return false, result.Error

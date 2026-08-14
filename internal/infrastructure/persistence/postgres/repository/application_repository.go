@@ -29,7 +29,7 @@ func (r *applicationRepository) GetByID(ctx context.Context, id string) (*entity
 	var appModel model.Application
 	result := r.db.WithContext(ctx).Where("id = ?", id).First(&appModel)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, application.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error
@@ -41,7 +41,7 @@ func (r *applicationRepository) GetBySlug(ctx context.Context, slug string) (*en
 	var appModel model.Application
 	result := r.db.WithContext(ctx).Where("slug = ?", slug).First(&appModel)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, application.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error
@@ -53,7 +53,7 @@ func (r *applicationRepository) GetByClientID(ctx context.Context, clientID stri
 	var appModel model.Application
 	result := r.db.WithContext(ctx).Where("client_id = ?", clientID).First(&appModel)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, application.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error

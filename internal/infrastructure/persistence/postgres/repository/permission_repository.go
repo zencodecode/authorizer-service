@@ -29,7 +29,7 @@ func (r *permissionRepository) GetByID(ctx context.Context, id string) (*entity.
 	var permModel model.Permission
 	result := r.db.WithContext(ctx).Where("id = ?", id).First(&permModel)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, permission.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error
@@ -43,7 +43,7 @@ func (r *permissionRepository) GetBySlug(ctx context.Context, applicationID, slu
 		Where("application_id = ? AND slug = ?", applicationID, slug).
 		First(&permModel)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, permission.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error

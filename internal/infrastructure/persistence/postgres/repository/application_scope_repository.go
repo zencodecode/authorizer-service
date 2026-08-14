@@ -29,7 +29,7 @@ func (r *applicationScopeRepository) GetByID(ctx context.Context, id string) (*e
 	var scopeModel model.ApplicationScope
 	result := r.db.WithContext(ctx).Where("id = ?", id).First(&scopeModel)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, applicationscope.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error
@@ -48,7 +48,7 @@ func (r *applicationScopeRepository) GetByApplicationAndScope(
 		First(&scopeModel)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, applicationscope.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error

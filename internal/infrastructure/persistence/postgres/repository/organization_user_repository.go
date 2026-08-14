@@ -35,7 +35,7 @@ func (r *organizationUserRepository) GetByOrganizationAndUser(ctx context.Contex
 		First(&orgUserModel)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, organizationuser.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error
@@ -55,7 +55,7 @@ func (r *organizationUserRepository) UpdateStatus(
 		Update("status", status)
 
 	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
+		return organizationuser.ErrNotFound
 	}
 	if result.Error != nil {
 		return result.Error

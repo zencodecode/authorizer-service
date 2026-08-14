@@ -32,7 +32,7 @@ func (r *oauthAccessTokenRepository) GetByTokenHash(ctx context.Context, tokenHa
 		Where("token_hash = ?", tokenHash).
 		First(&tokenModel)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, oauthaccesstoken.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error

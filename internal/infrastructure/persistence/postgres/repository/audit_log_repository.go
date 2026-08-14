@@ -29,7 +29,7 @@ func (r *auditLogRepository) GetByID(ctx context.Context, id string) (*entity.Au
 	var logModel model.AuditLog
 	result := r.db.WithContext(ctx).Where("id = ?", id).First(&logModel)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, auditlog.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error
