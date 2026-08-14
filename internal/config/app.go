@@ -17,6 +17,7 @@ type (
 	}
 
 	InterfacesConfig struct {
+		HTTPPublic  HTTPPublic
 		HTTPPrivate HTTPPrivate
 	}
 )
@@ -37,7 +38,12 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
-	httpCfg, err := LoadHTTPPrivateConfig()
+	public, err := LoadHTTPPublicConfig()
+	if err != nil {
+		return Config{}, err
+	}
+
+	private, err := LoadHTTPPrivateConfig()
 	if err != nil {
 		return Config{}, err
 	}
@@ -46,7 +52,8 @@ func Load() (Config, error) {
 		Database: DatabaseConfig{Postgres: pgCfg, Redis: rdCfg},
 		Auth:     AuthConfig{JWT: jwtCfg},
 		Interfaces: InterfacesConfig{
-			HTTPPrivate: httpCfg,
+			HTTPPublic:  public,
+			HTTPPrivate: private,
 		},
 	}, nil
 }
