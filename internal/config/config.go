@@ -38,12 +38,12 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
-	public, err := LoadHTTPPublicConfig()
+	pblCfg, err := LoadHTTPPublicConfig()
 	if err != nil {
 		return Config{}, err
 	}
 
-	private, err := LoadHTTPPrivateConfig()
+	pvtCfg, err := LoadHTTPPrivateConfig()
 	if err != nil {
 		return Config{}, err
 	}
@@ -52,8 +52,8 @@ func Load() (Config, error) {
 		Database: DatabaseConfig{Postgres: pgCfg, Redis: rdCfg},
 		Auth:     AuthConfig{JWT: jwtCfg},
 		Interfaces: InterfacesConfig{
-			HTTPPublic:  public,
-			HTTPPrivate: private,
+			HTTPPublic:  pblCfg,
+			HTTPPrivate: pvtCfg,
 		},
 	}, nil
 }
