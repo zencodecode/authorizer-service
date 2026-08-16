@@ -1,6 +1,6 @@
 package serializer
 
-import "github.com/zencodecode/authorizer-service/internal/infrastructure/driver/auth"
+import "github.com/zencodecode/authorizer-service/internal/infrastructure/auth"
 
 type (
 	JWKSResponse struct {

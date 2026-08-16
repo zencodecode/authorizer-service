@@ -3,7 +3,7 @@ package auth
 import (
 	"github.com/zencodecode/authorizer-service/internal/config"
 	"github.com/zencodecode/authorizer-service/internal/domain/service"
-	"github.com/zencodecode/authorizer-service/internal/infrastructure/driver/auth"
+	"github.com/zencodecode/authorizer-service/internal/infrastructure/auth"
 )
 
 type Handler struct {

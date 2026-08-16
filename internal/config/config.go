@@ -13,7 +13,8 @@ type (
 	}
 
 	AuthConfig struct {
-		JWT JWT
+		JWT  JWT
+		OIDC OIDC
 	}
 
 	InterfacesConfig struct {
@@ -29,6 +30,11 @@ func Load() (Config, error) {
 	}
 
 	jwtCfg, err := LoadJWTConfig()
+	if err != nil {
+		return Config{}, err
+	}
+
+	oidcCfg, err := LoadOIDCConfig(jwtCfg)
 	if err != nil {
 		return Config{}, err
 	}
@@ -50,7 +56,10 @@ func Load() (Config, error) {
 
 	return Config{
 		Database: DatabaseConfig{Postgres: pgCfg, Redis: rdCfg},
-		Auth:     AuthConfig{JWT: jwtCfg},
+		Auth: AuthConfig{
+			JWT:  jwtCfg,
+			OIDC: oidcCfg,
+		},
 		Interfaces: InterfacesConfig{
 			HTTPPublic:  pblCfg,
 			HTTPPrivate: pvtCfg,

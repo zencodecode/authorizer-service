@@ -13,6 +13,7 @@ func (h *Handler) GetJWKS(c *gin.Context) {
 			"error", err.Error(),
 		)
 		response.InternalServerError(c, "failed to generate JWKS")
+		return
 	}
 
 	data := serializer.JWKSResponse{
