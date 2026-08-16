@@ -1,2 +1,0 @@
--- +migrate Up
-CREATE TYPE scope AS ENUM ('GLOBAL', 'APPLICATION');
