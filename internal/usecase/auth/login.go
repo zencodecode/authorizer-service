@@ -6,9 +6,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
-	"github.com/zencodecode/authorizer-service/internal/domain/repository/permission"
-	"github.com/zencodecode/authorizer-service/internal/domain/repository/role"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/rolepermission"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/user"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/userrole"
@@ -18,24 +17,23 @@ import (
 
 type (
 	LoginParams struct {
-		Email    string
-		Password string
-		OrgID    string
+		Email         string
+		Password      string
+		ApplicationID uuid.UUID
+		OrgID         *uuid.UUID
 	}
 
 	LoginOutput struct {
 		User         *entity.User
-		Token        string
+		AccessToken  string
 		RefreshToken string
-		Claims       *entity.Claims
+		ExpiresIn    int
 	}
 )
 
 type loginUsecase struct {
 	userRepo     user.Repository
-	roleRepo     role.Repository
 	userRoleRepo userrole.Repository
-	permRepo     permission.Repository
 	rolePermRepo rolepermission.Repository
 	token        service.Token
 	logger       service.Logger
@@ -43,18 +41,14 @@ type loginUsecase struct {
 
 func NewLoginUsecase(
 	userRepo user.Repository,
-	roleRepo role.Repository,
 	userRoleRepo userrole.Repository,
-	permRepo permission.Repository,
 	rolePermRepo rolepermission.Repository,
 	token service.Token,
 	logger service.Logger,
 ) LoginUsecase {
 	return &loginUsecase{
 		userRepo:     userRepo,
-		roleRepo:     roleRepo,
 		userRoleRepo: userRoleRepo,
-		permRepo:     permRepo,
 		rolePermRepo: rolePermRepo,
 		token:        token,
 		logger:       logger,
@@ -62,102 +56,126 @@ func NewLoginUsecase(
 }
 
 func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*LoginOutput, error) {
-	// var authorization []entity.Authorization
-	var audiences []string
-
-	user, err := uc.userRepo.GetByEmail(ctx, params.Email)
+	// 1. Lookup user by email
+	u, err := uc.userRepo.GetByEmail(ctx, params.Email)
 	if err != nil {
-		uc.logger.Warn(ctx, "failed to fetch user by email ",
+		uc.logger.Warn(ctx, "failed to fetch user by email",
 			"email", params.Email,
-			"context", "LOGIN",
 			"error", err.Error(),
 		)
 		return nil, errors.New("email or password is invalid")
 	}
+	if u == nil {
+		return nil, errors.New("email or password is invalid")
+	}
 
-	if !hash.CheckHash(user.PasswordHash, params.Password) {
+	// 2. Verify status
+	if u.Status != "active" {
+		uc.logger.Warn(ctx, "login attempt on inactive account",
+			"user_id", u.ID,
+			"status", u.Status,
+		)
+		return nil, errors.New("account is not active")
+	}
+
+	// 3. Verify password
+	if !hash.CheckHash(u.PasswordHash, params.Password) {
 		uc.logger.Warn(ctx, "invalid password",
-			"user_id", user.ID,
-			"context", "LOGIN",
+			"user_id", u.ID,
 		)
 		return nil, errors.New("email or password is invalid")
 	}
 
-	roles, err := uc.userRoleRepo.ListRolesByUser(ctx, user.ID.String(), &params.OrgID)
-	if len(roles) > 0 {
-		roleSet := make(map[string]struct{})
-		permSet := make(map[string]struct{})
-
-		for _, r := range roles {
-			roleSet[r.Slug] = struct{}{}
-
-			perms, _ := uc.rolePermRepo.ListPermissionsByRole(ctx, r.ID.String())
-			for _, p := range perms {
-				permSet[p.Slug] = struct{}{}
-			}
-		}
-
-		// authorization = append(authorization, entity.Authorization{
-		// 	Roles:       mapKeys(roleSet),
-		// 	Permissions: mapKeys(permSet),
-		// })
-
-		audiences = append(audiences, "LOG-SERVICE")
+	// 4. Query roles for this user + application + organization
+	roles, err := uc.userRoleRepo.ListRolesByUser(ctx, u.ID, params.OrgID)
+	if err != nil {
+		uc.logger.Error(ctx, "failed to fetch roles",
+			"user_id", u.ID,
+			"error", err.Error(),
+		)
+		return nil, errors.New("failed to fetch user roles")
 	}
 
+	// 5. Collect role slugs and permissions
+	roleSlugs := make([]string, 0, len(roles))
+	permSet := make(map[string]struct{})
+
+	for _, r := range roles {
+		if r.ApplicationID != params.ApplicationID {
+			continue
+		}
+		roleSlugs = append(roleSlugs, r.Slug)
+
+		perms, _ := uc.rolePermRepo.ListPermissionsByRole(ctx, r.ID)
+		for _, p := range perms {
+			permSet[p.Slug] = struct{}{}
+		}
+	}
+
+	permSlugs := make([]string, 0, len(permSet))
+	for k := range permSet {
+		permSlugs = append(permSlugs, k)
+	}
+
+	// 6. Build claims
 	now := time.Now()
+	expiresIn := 15 * time.Minute
+
 	claims := &entity.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    "",
-			Subject:   user.ID.String(),
-			Audience:  audiences,
-			ExpiresAt: now.Add(time.Hour).Unix(),
+			Issuer:    "authorizer-service",
+			Subject:   u.ID.String(),
+			Audience:  jwt.ClaimStrings{params.ApplicationID.String()},
+			ExpiresAt: jwt.NewNumericDate(now.Add(expiresIn)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			ID:        uuid.Must(uuid.NewV7()).String(),
 		},
+		Name:        u.Name,
+		Email:       u.Email,
+		Scopes:      []string{"openid", "profile", "email"},
+		Roles:       roleSlugs,
+		Permissions: permSlugs,
 	}
 
+	if params.OrgID != nil {
+		orgIDStr := params.OrgID.String()
+		claims.OrgID = &orgIDStr
+	}
+
+	// 7. Generate access token
 	accessToken, err := uc.token.GenerateAccessToken(ctx, claims)
 	if err != nil {
-		uc.logger.Error("Failed to generate access token", service.Fields{
-			"user_id": user.ID,
-			"context": "LOGIN",
-			"error":   err.Error(),
-		})
+		uc.logger.Error(ctx, "failed to generate access token",
+			"user_id", u.ID,
+			"error", err.Error(),
+		)
 		return nil, errors.New("failed to generate access token")
 	}
 
+	// 8. Generate refresh token
 	refreshToken, err := uc.token.GenerateRefreshToken()
 	if err != nil {
-		uc.logger.Error("Failed to generate refresh token", service.Fields{
-			"user_id": user.ID,
-			"context": "LOGIN",
-			"error":   err.Error(),
-		})
-		return nil, errors.New("failed generating refresh token")
+		uc.logger.Error(ctx, "failed to generate refresh token",
+			"user_id", u.ID,
+			"error", err.Error(),
+		)
+		return nil, errors.New("failed to generate refresh token")
 	}
 
-	err = uc.token.StoreRefreshToken(ctx, user.ID, refreshToken)
+	// 9. Store refresh token
+	err = uc.token.StoreRefreshToken(ctx, u.ID.String(), refreshToken)
 	if err != nil {
-		uc.logger.Error("Failed to store refresh token", service.Fields{
-			"user_id": user.ID,
-			"context": "LOGIN",
-			"error":   err.Error(),
-		})
-		return nil, errors.New("failed saving refresh token")
+		uc.logger.Error(ctx, "failed to store refresh token",
+			"user_id", u.ID,
+			"error", err.Error(),
+		)
+		return nil, errors.New("failed to store refresh token")
 	}
 
-	output := &LoginOutput{
-		User:         user,
-		Token:        accessToken,
+	return &LoginOutput{
+		User:         u,
+		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		Claims:       claims,
-	}
-	return output, nil
-}
-
-func mapKeys(m map[string]struct{}) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return keys
+		ExpiresIn:    int(expiresIn.Seconds()),
+	}, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/applicationscope"
 	"github.com/zencodecode/authorizer-service/internal/infrastructure/persistence/postgres/model"
@@ -15,66 +16,59 @@ type applicationScopeRepository struct {
 }
 
 func NewApplicationScopeRepository(db *gorm.DB) applicationscope.Repository {
-	return &applicationScopeRepository{
-		db: db,
-	}
+	return &applicationScopeRepository{db: db}
 }
 
 func (r *applicationScopeRepository) Create(ctx context.Context, scope *entity.ApplicationScope) error {
-	scopeModel := model.ApplicationScopeFromEntity(scope)
-	return r.db.WithContext(ctx).Create(scopeModel).Error
+	m := model.ApplicationScopeFromEntity(scope)
+	return r.db.WithContext(ctx).Create(m).Error
 }
 
-func (r *applicationScopeRepository) GetByID(ctx context.Context, id string) (*entity.ApplicationScope, error) {
-	var scopeModel model.ApplicationScope
-	result := r.db.WithContext(ctx).Where("id = ?", id).First(&scopeModel)
+func (r *applicationScopeRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.ApplicationScope, error) {
+	var m model.ApplicationScope
+	result := r.db.WithContext(ctx).Where("id = ?", id).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, applicationscope.ErrNotFound
+		return nil, nil
 	}
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return scopeModel.ToEntity(), nil
+	return m.ToEntity(), nil
 }
 
-func (r *applicationScopeRepository) GetByApplicationAndScope(
-	ctx context.Context,
-	applicationID,
-	scope string,
-) (*entity.ApplicationScope, error) {
-	var scopeModel model.ApplicationScope
+func (r *applicationScopeRepository) GetByApplicationAndScope(ctx context.Context, applicationID uuid.UUID, scope string) (*entity.ApplicationScope, error) {
+	var m model.ApplicationScope
 	result := r.db.WithContext(ctx).
 		Where("application_id = ? AND scope = ?", applicationID, scope).
-		First(&scopeModel)
-
+		First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, applicationscope.ErrNotFound
+		return nil, nil
 	}
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return scopeModel.ToEntity(), nil
+	return m.ToEntity(), nil
 }
 
 func (r *applicationScopeRepository) Update(ctx context.Context, scope *entity.ApplicationScope) error {
-	scopeModel := model.ApplicationScopeFromEntity(scope)
-	return r.db.WithContext(ctx).Save(scopeModel).Error
+	m := model.ApplicationScopeFromEntity(scope)
+	return r.db.WithContext(ctx).Save(m).Error
 }
 
-func (r *applicationScopeRepository) Delete(ctx context.Context, id string) error {
+func (r *applicationScopeRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.ApplicationScope{}).Error
 }
 
-func (r *applicationScopeRepository) ListByApplication(ctx context.Context, applicationID string) ([]*entity.ApplicationScope, error) {
-	var scopesModel []model.ApplicationScope
-	result := r.db.WithContext(ctx).Where("application_id = ?", applicationID).Find(&scopesModel)
+func (r *applicationScopeRepository) ListByApplication(ctx context.Context, applicationID uuid.UUID) ([]*entity.ApplicationScope, error) {
+	var models []model.ApplicationScope
+	result := r.db.WithContext(ctx).Where("application_id = ?", applicationID).Find(&models)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 
-	scopesEntity := make([]*entity.ApplicationScope, len(scopesModel))
-	for i, m := range scopesModel {
-		scopesEntity[i] = m.ToEntity()
+	entities := make([]*entity.ApplicationScope, len(models))
+	for i, m := range models {
+		entities[i] = m.ToEntity()
 	}
-	return scopesEntity, nil
+	return entities, nil
 }

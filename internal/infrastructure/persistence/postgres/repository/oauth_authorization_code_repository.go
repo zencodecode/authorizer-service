@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/oauthauthorizationcode"
 	"github.com/zencodecode/authorizer-service/internal/infrastructure/persistence/postgres/model"
@@ -16,31 +17,27 @@ type oauthAuthorizationCodeRepository struct {
 }
 
 func NewOAuthAuthorizationCodeRepository(db *gorm.DB) oauthauthorizationcode.Repository {
-	return &oauthAuthorizationCodeRepository{
-		db: db,
-	}
+	return &oauthAuthorizationCodeRepository{db: db}
 }
 
 func (r *oauthAuthorizationCodeRepository) Create(ctx context.Context, code *entity.OAuthAuthorizationCode) error {
-	codeModel := model.OAuthAuthorizationCodeFromEntity(code)
-	return r.db.WithContext(ctx).Create(codeModel).Error
+	m := model.OAuthAuthorizationCodeFromEntity(code)
+	return r.db.WithContext(ctx).Create(m).Error
 }
 
 func (r *oauthAuthorizationCodeRepository) GetByCodeHash(ctx context.Context, codeHash string) (*entity.OAuthAuthorizationCode, error) {
-	var codeModel model.OAuthAuthorizationCode
-	result := r.db.WithContext(ctx).
-		Where("code_hash = ?", codeHash).
-		First(&codeModel)
+	var m model.OAuthAuthorizationCode
+	result := r.db.WithContext(ctx).Where("code_hash = ?", codeHash).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, oauthauthorizationcode.ErrNotFound
+		return nil, nil
 	}
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return codeModel.ToEntity(), nil
+	return m.ToEntity(), nil
 }
 
-func (r *oauthAuthorizationCodeRepository) MarkUsed(ctx context.Context, id string) error {
+func (r *oauthAuthorizationCodeRepository) MarkUsed(ctx context.Context, id uuid.UUID) error {
 	now := time.Now()
 	return r.db.WithContext(ctx).
 		Model(&model.OAuthAuthorizationCode{}).

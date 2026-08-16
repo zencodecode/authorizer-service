@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/emailverificationtoken"
 	"github.com/zencodecode/authorizer-service/internal/infrastructure/persistence/postgres/model"
@@ -16,31 +17,27 @@ type emailVerificationTokenRepository struct {
 }
 
 func NewEmailVerificationTokenRepository(db *gorm.DB) emailverificationtoken.Repository {
-	return &emailVerificationTokenRepository{
-		db: db,
-	}
+	return &emailVerificationTokenRepository{db: db}
 }
 
 func (r *emailVerificationTokenRepository) Create(ctx context.Context, token *entity.EmailVerificationToken) error {
-	tokenModel := model.EmailVerificationTokenFromEntity(token)
-	return r.db.WithContext(ctx).Create(tokenModel).Error
+	m := model.EmailVerificationTokenFromEntity(token)
+	return r.db.WithContext(ctx).Create(m).Error
 }
 
 func (r *emailVerificationTokenRepository) GetByTokenHash(ctx context.Context, tokenHash string) (*entity.EmailVerificationToken, error) {
-	var tokenModel model.EmailVerificationToken
-	result := r.db.WithContext(ctx).
-		Where("token_hash = ?", tokenHash).
-		First(&tokenModel)
+	var m model.EmailVerificationToken
+	result := r.db.WithContext(ctx).Where("token_hash = ?", tokenHash).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, emailverificationtoken.ErrNotFound
+		return nil, nil
 	}
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return tokenModel.ToEntity(), nil
+	return m.ToEntity(), nil
 }
 
-func (r *emailVerificationTokenRepository) MarkUsed(ctx context.Context, id string) error {
+func (r *emailVerificationTokenRepository) MarkUsed(ctx context.Context, id uuid.UUID) error {
 	now := time.Now()
 	return r.db.WithContext(ctx).
 		Model(&model.EmailVerificationToken{}).

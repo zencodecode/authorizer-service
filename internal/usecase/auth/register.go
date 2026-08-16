@@ -3,22 +3,20 @@ package auth
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
-	"github.com/zencodecode/authorizer-service/internal/domain/repository/role"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/user"
-	"github.com/zencodecode/authorizer-service/internal/domain/repository/userrole"
 	"github.com/zencodecode/authorizer-service/internal/domain/service"
 	"github.com/zencodecode/authorizer-service/pkg/hash"
-	"github.com/zencodecode/authorizer-service/pkg/stringopr"
 )
 
 type (
 	RegisterParams struct {
 		Email    string
 		Password string
-		FullName string
+		Name     string
 	}
 
 	RegisterOutput struct {
@@ -27,81 +25,73 @@ type (
 )
 
 type registerUsecase struct {
-	userRepo     user.Repository
-	roleRepo     role.Repository
-	userRoleRepo userrole.Repository
-	logger       service.Logger
+	userRepo user.Repository
+	logger   service.Logger
 }
 
 func NewRegisterUsecase(
 	userRepo user.Repository,
-	roleRepo role.Repository,
-	userRoleRepo userrole.Repository,
 	logger service.Logger,
 ) RegisterUsecase {
 	return &registerUsecase{
-		userRepo:     userRepo,
-		roleRepo:     roleRepo,
-		userRoleRepo: userRoleRepo,
-		logger:       logger,
+		userRepo: userRepo,
+		logger:   logger,
 	}
 }
 
 func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (*RegisterOutput, error) {
-
+	// 1. Validate password length
 	if len(params.Password) < 8 {
-		uc.logger.Warn(ctx, "Registration failed: password too short",
-			"email", params.Email,
-			"context", "REGISTER",
-		)
 		return nil, errors.New("password must be at least 8 characters")
 	}
 
+	// 2. Check if email already exists
 	existingUser, _ := uc.userRepo.GetByEmail(ctx, params.Email)
 	if existingUser != nil {
-		uc.logger.Warn(ctx, "Registration failed: email already exists",
+		uc.logger.Warn(ctx, "registration failed: email already exists",
 			"email", params.Email,
-			"context", "REGISTER",
 		)
-		return nil, errors.New("email already exists")
+		return nil, errors.New("email already registered")
 	}
 
+	// 3. Hash password
 	hashedPassword, err := hash.Hash(params.Password)
 	if err != nil {
-		uc.logger.Error(ctx, "Failed to hash password",
+		uc.logger.Error(ctx, "failed to hash password",
 			"email", params.Email,
 			"error", err.Error(),
-			"context", "REGISTER",
 		)
-		return nil, errors.New("failed to hash password")
+		return nil, errors.New("failed to process registration")
 	}
 
-	userID := stringopr.GenerateUUID()
-	parsedUUID, err := uuid.Parse(userID)
-	if err != nil {
-		uc.logger.Error(ctx, "failed to parse UUID",
-			"user_id", userID,
-			"error", err.Error(),
-			"context", "REGISTER",
-		)
-		return nil, errors.New("failed to hash password")
-	}
-
-	user := &entity.User{
-		ID:           parsedUUID,
+	// 4. Create user entity
+	now := time.Now()
+	u := &entity.User{
+		ID:           uuid.Must(uuid.NewV7()),
 		Email:        params.Email,
 		PasswordHash: hashedPassword,
-		Name:         params.FullName,
+		Name:         params.Name,
+		Status:       "pending_verification",
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 
-	err = uc.userRepo.Create(ctx, user)
+	// 5. Persist
+	err = uc.userRepo.Create(ctx, u)
 	if err != nil {
-		uc.logger.Error(ctx, "Failed to create user",
+		uc.logger.Error(ctx, "failed to create user",
 			"email", params.Email,
 			"error", err.Error(),
-			"context", "REGISTER",
 		)
 		return nil, errors.New("failed to create user")
 	}
-	return &RegisterOutput{User: user}, nil
+
+	// TODO: Generate email verification token and send email
+
+	uc.logger.Info(ctx, "user registered successfully",
+		"user_id", u.ID,
+		"email", u.Email,
+	)
+
+	return &RegisterOutput{User: u}, nil
 }

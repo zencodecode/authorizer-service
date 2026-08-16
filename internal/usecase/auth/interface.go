@@ -1,8 +1,6 @@
 package auth
 
-import (
-	"context"
-)
+import "context"
 
 type LoginUsecase interface {
 	Execute(ctx context.Context, params LoginParams) (*LoginOutput, error)

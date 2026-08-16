@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/user"
 	"github.com/zencodecode/authorizer-service/internal/infrastructure/persistence/postgres/model"
@@ -15,59 +16,57 @@ type userRepository struct {
 }
 
 func NewUserRepository(db *gorm.DB) user.Repository {
-	return &userRepository{
-		db: db,
-	}
+	return &userRepository{db: db}
 }
 
-func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
-	userModel := model.UserFromEntity(user)
-	return r.db.WithContext(ctx).Create(userModel).Error
+func (r *userRepository) Create(ctx context.Context, u *entity.User) error {
+	m := model.UserFromEntity(u)
+	return r.db.WithContext(ctx).Create(m).Error
 }
 
-func (r *userRepository) GetByID(ctx context.Context, id string) (*entity.User, error) {
-	var userModel model.User
-	result := r.db.WithContext(ctx).Where("id = ?", id).First(&userModel)
+func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
+	var m model.User
+	result := r.db.WithContext(ctx).Where("id = ?", id).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, user.ErrNotFound
+		return nil, nil
 	}
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return userModel.ToEntity(), nil
+	return m.ToEntity(), nil
 }
 
 func (r *userRepository) GetByEmail(ctx context.Context, email string) (*entity.User, error) {
-	var userModel model.User
-	result := r.db.WithContext(ctx).Where("email = ?", email).First(&userModel)
+	var m model.User
+	result := r.db.WithContext(ctx).Where("email = ?", email).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, user.ErrNotFound
+		return nil, nil
 	}
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return userModel.ToEntity(), nil
+	return m.ToEntity(), nil
 }
 
-func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
-	userModel := model.UserFromEntity(user)
-	return r.db.WithContext(ctx).Save(userModel).Error
+func (r *userRepository) Update(ctx context.Context, u *entity.User) error {
+	m := model.UserFromEntity(u)
+	return r.db.WithContext(ctx).Save(m).Error
 }
 
-func (r *userRepository) Delete(ctx context.Context, id string) error {
+func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.User{}).Error
 }
 
 func (r *userRepository) List(ctx context.Context, limit, offset int) ([]*entity.User, error) {
-	var usersModel []model.User
-	result := r.db.WithContext(ctx).Limit(limit).Offset(offset).Find(&usersModel)
+	var models []model.User
+	result := r.db.WithContext(ctx).Limit(limit).Offset(offset).Find(&models)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 
-	usersEntity := make([]*entity.User, len(usersModel))
-	for i, m := range usersModel {
-		usersEntity[i] = m.ToEntity()
+	entities := make([]*entity.User, len(models))
+	for i, m := range models {
+		entities[i] = m.ToEntity()
 	}
-	return usersEntity, nil
+	return entities, nil
 }

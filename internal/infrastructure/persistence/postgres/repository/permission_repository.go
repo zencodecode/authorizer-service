@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/permission"
 	"github.com/zencodecode/authorizer-service/internal/infrastructure/persistence/postgres/model"
@@ -15,65 +16,62 @@ type permissionRepository struct {
 }
 
 func NewPermissionRepository(db *gorm.DB) permission.Repository {
-	return &permissionRepository{
-		db: db,
-	}
+	return &permissionRepository{db: db}
 }
 
 func (r *permissionRepository) Create(ctx context.Context, perm *entity.Permission) error {
-	permModel := model.PermissionFromEntity(perm)
-	return r.db.WithContext(ctx).Create(permModel).Error
+	m := model.PermissionFromEntity(perm)
+	return r.db.WithContext(ctx).Create(m).Error
 }
 
-func (r *permissionRepository) GetByID(ctx context.Context, id string) (*entity.Permission, error) {
-	var permModel model.Permission
-	result := r.db.WithContext(ctx).Where("id = ?", id).First(&permModel)
+func (r *permissionRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Permission, error) {
+	var m model.Permission
+	result := r.db.WithContext(ctx).Where("id = ?", id).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, permission.ErrNotFound
+		return nil, nil
 	}
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return permModel.ToEntity(), nil
+	return m.ToEntity(), nil
 }
 
-func (r *permissionRepository) GetBySlug(ctx context.Context, applicationID, slug string) (*entity.Permission, error) {
-	var permModel model.Permission
+func (r *permissionRepository) GetBySlug(ctx context.Context, applicationID uuid.UUID, slug string) (*entity.Permission, error) {
+	var m model.Permission
 	result := r.db.WithContext(ctx).
 		Where("application_id = ? AND slug = ?", applicationID, slug).
-		First(&permModel)
+		First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, permission.ErrNotFound
+		return nil, nil
 	}
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return permModel.ToEntity(), nil
+	return m.ToEntity(), nil
 }
 
 func (r *permissionRepository) Update(ctx context.Context, perm *entity.Permission) error {
-	permModel := model.PermissionFromEntity(perm)
-	return r.db.WithContext(ctx).Save(permModel).Error
+	m := model.PermissionFromEntity(perm)
+	return r.db.WithContext(ctx).Save(m).Error
 }
 
-func (r *permissionRepository) Delete(ctx context.Context, id string) error {
+func (r *permissionRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.Permission{}).Error
 }
 
-func (r *permissionRepository) ListByApplication(ctx context.Context, applicationID string, limit, offset int) ([]*entity.Permission, error) {
-	var permsModel []model.Permission
+func (r *permissionRepository) ListByApplication(ctx context.Context, applicationID uuid.UUID, limit, offset int) ([]*entity.Permission, error) {
+	var models []model.Permission
 	result := r.db.WithContext(ctx).
 		Where("application_id = ?", applicationID).
-		Limit(limit).
-		Offset(offset).
-		Find(&permsModel)
+		Limit(limit).Offset(offset).
+		Find(&models)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 
-	permsEntity := make([]*entity.Permission, len(permsModel))
-	for i, m := range permsModel {
-		permsEntity[i] = m.ToEntity()
+	entities := make([]*entity.Permission, len(models))
+	for i, m := range models {
+		entities[i] = m.ToEntity()
 	}
-	return permsEntity, nil
+	return entities, nil
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/oauthrefreshtoken"
 	"github.com/zencodecode/authorizer-service/internal/infrastructure/persistence/postgres/model"
@@ -16,31 +17,27 @@ type oauthRefreshTokenRepository struct {
 }
 
 func NewOAuthRefreshTokenRepository(db *gorm.DB) oauthrefreshtoken.Repository {
-	return &oauthRefreshTokenRepository{
-		db: db,
-	}
+	return &oauthRefreshTokenRepository{db: db}
 }
 
 func (r *oauthRefreshTokenRepository) Create(ctx context.Context, token *entity.OAuthRefreshToken) error {
-	tokenModel := model.OAuthRefreshTokenFromEntity(token)
-	return r.db.WithContext(ctx).Create(tokenModel).Error
+	m := model.OAuthRefreshTokenFromEntity(token)
+	return r.db.WithContext(ctx).Create(m).Error
 }
 
 func (r *oauthRefreshTokenRepository) GetByTokenHash(ctx context.Context, tokenHash string) (*entity.OAuthRefreshToken, error) {
-	var tokenModel model.OAuthRefreshToken
-	result := r.db.WithContext(ctx).
-		Where("token_hash = ?", tokenHash).
-		First(&tokenModel)
+	var m model.OAuthRefreshToken
+	result := r.db.WithContext(ctx).Where("token_hash = ?", tokenHash).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, oauthrefreshtoken.ErrNotFound
+		return nil, nil
 	}
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return tokenModel.ToEntity(), nil
+	return m.ToEntity(), nil
 }
 
-func (r *oauthRefreshTokenRepository) Revoke(ctx context.Context, id string) error {
+func (r *oauthRefreshTokenRepository) Revoke(ctx context.Context, id uuid.UUID) error {
 	now := time.Now()
 	return r.db.WithContext(ctx).
 		Model(&model.OAuthRefreshToken{}).
@@ -48,7 +45,7 @@ func (r *oauthRefreshTokenRepository) Revoke(ctx context.Context, id string) err
 		Update("revoked_at", now).Error
 }
 
-func (r *oauthRefreshTokenRepository) RevokeByAccessTokenID(ctx context.Context, accessTokenID string) error {
+func (r *oauthRefreshTokenRepository) RevokeByAccessTokenID(ctx context.Context, accessTokenID uuid.UUID) error {
 	now := time.Now()
 	return r.db.WithContext(ctx).
 		Model(&model.OAuthRefreshToken{}).

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/oauthaccesstoken"
 	"github.com/zencodecode/authorizer-service/internal/infrastructure/persistence/postgres/model"
@@ -16,31 +17,27 @@ type oauthAccessTokenRepository struct {
 }
 
 func NewOAuthAccessTokenRepository(db *gorm.DB) oauthaccesstoken.Repository {
-	return &oauthAccessTokenRepository{
-		db: db,
-	}
+	return &oauthAccessTokenRepository{db: db}
 }
 
 func (r *oauthAccessTokenRepository) Create(ctx context.Context, token *entity.OAuthAccessToken) error {
-	tokenModel := model.OAuthAccessTokenFromEntity(token)
-	return r.db.WithContext(ctx).Create(tokenModel).Error
+	m := model.OAuthAccessTokenFromEntity(token)
+	return r.db.WithContext(ctx).Create(m).Error
 }
 
 func (r *oauthAccessTokenRepository) GetByTokenHash(ctx context.Context, tokenHash string) (*entity.OAuthAccessToken, error) {
-	var tokenModel model.OAuthAccessToken
-	result := r.db.WithContext(ctx).
-		Where("token_hash = ?", tokenHash).
-		First(&tokenModel)
+	var m model.OAuthAccessToken
+	result := r.db.WithContext(ctx).Where("token_hash = ?", tokenHash).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, oauthaccesstoken.ErrNotFound
+		return nil, nil
 	}
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return tokenModel.ToEntity(), nil
+	return m.ToEntity(), nil
 }
 
-func (r *oauthAccessTokenRepository) Revoke(ctx context.Context, id string) error {
+func (r *oauthAccessTokenRepository) Revoke(ctx context.Context, id uuid.UUID) error {
 	now := time.Now()
 	return r.db.WithContext(ctx).
 		Model(&model.OAuthAccessToken{}).
@@ -48,7 +45,7 @@ func (r *oauthAccessTokenRepository) Revoke(ctx context.Context, id string) erro
 		Update("revoked_at", now).Error
 }
 
-func (r *oauthAccessTokenRepository) RevokeAllByUser(ctx context.Context, userID string) error {
+func (r *oauthAccessTokenRepository) RevokeAllByUser(ctx context.Context, userID uuid.UUID) error {
 	now := time.Now()
 	return r.db.WithContext(ctx).
 		Model(&model.OAuthAccessToken{}).
@@ -56,7 +53,7 @@ func (r *oauthAccessTokenRepository) RevokeAllByUser(ctx context.Context, userID
 		Update("revoked_at", now).Error
 }
 
-func (r *oauthAccessTokenRepository) RevokeAllByUserAndApplication(ctx context.Context, userID, applicationID string) error {
+func (r *oauthAccessTokenRepository) RevokeAllByUserAndApplication(ctx context.Context, userID, applicationID uuid.UUID) error {
 	now := time.Now()
 	return r.db.WithContext(ctx).
 		Model(&model.OAuthAccessToken{}).

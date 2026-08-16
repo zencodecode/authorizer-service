@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/organization"
 	"github.com/zencodecode/authorizer-service/internal/infrastructure/persistence/postgres/model"
@@ -15,59 +16,57 @@ type organizationRepository struct {
 }
 
 func NewOrganizationRepository(db *gorm.DB) organization.Repository {
-	return &organizationRepository{
-		db: db,
-	}
+	return &organizationRepository{db: db}
 }
 
 func (r *organizationRepository) Create(ctx context.Context, org *entity.Organization) error {
-	orgModel := model.OrganizationFromEntity(org)
-	return r.db.WithContext(ctx).Create(orgModel).Error
+	m := model.OrganizationFromEntity(org)
+	return r.db.WithContext(ctx).Create(m).Error
 }
 
-func (r *organizationRepository) GetByID(ctx context.Context, id string) (*entity.Organization, error) {
-	var orgModel model.Organization
-	result := r.db.WithContext(ctx).Where("id = ?", id).First(&orgModel)
+func (r *organizationRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Organization, error) {
+	var m model.Organization
+	result := r.db.WithContext(ctx).Where("id = ?", id).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, organization.ErrNotFound
+		return nil, nil
 	}
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return orgModel.ToEntity(), nil
+	return m.ToEntity(), nil
 }
 
 func (r *organizationRepository) GetBySlug(ctx context.Context, slug string) (*entity.Organization, error) {
-	var orgModel model.Organization
-	result := r.db.WithContext(ctx).Where("slug = ?", slug).First(&orgModel)
+	var m model.Organization
+	result := r.db.WithContext(ctx).Where("slug = ?", slug).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, organization.ErrNotFound
+		return nil, nil
 	}
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return orgModel.ToEntity(), nil
+	return m.ToEntity(), nil
 }
 
 func (r *organizationRepository) Update(ctx context.Context, org *entity.Organization) error {
-	orgModel := model.OrganizationFromEntity(org)
-	return r.db.WithContext(ctx).Save(orgModel).Error
+	m := model.OrganizationFromEntity(org)
+	return r.db.WithContext(ctx).Save(m).Error
 }
 
-func (r *organizationRepository) Delete(ctx context.Context, id string) error {
+func (r *organizationRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.Organization{}).Error
 }
 
 func (r *organizationRepository) List(ctx context.Context, limit, offset int) ([]*entity.Organization, error) {
-	var orgsModel []model.Organization
-	result := r.db.WithContext(ctx).Limit(limit).Offset(offset).Find(&orgsModel)
+	var models []model.Organization
+	result := r.db.WithContext(ctx).Limit(limit).Offset(offset).Find(&models)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 
-	orgsEntity := make([]*entity.Organization, len(orgsModel))
-	for i, m := range orgsModel {
-		orgsEntity[i] = m.ToEntity()
+	entities := make([]*entity.Organization, len(models))
+	for i, m := range models {
+		entities[i] = m.ToEntity()
 	}
-	return orgsEntity, nil
+	return entities, nil
 }

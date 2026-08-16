@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/organizationapplication"
 	"github.com/zencodecode/authorizer-service/internal/infrastructure/persistence/postgres/model"
@@ -15,92 +16,74 @@ type organizationApplicationRepository struct {
 }
 
 func NewOrganizationApplicationRepository(db *gorm.DB) organizationapplication.Repository {
-	return &organizationApplicationRepository{
-		db: db,
-	}
+	return &organizationApplicationRepository{db: db}
 }
 
 func (r *organizationApplicationRepository) Create(ctx context.Context, orgApp *entity.OrganizationApplication) error {
-	orgAppModel := model.OrganizationApplicationFromEntity(orgApp)
-	return r.db.WithContext(ctx).Create(orgAppModel).Error
+	m := model.OrganizationApplicationFromEntity(orgApp)
+	return r.db.WithContext(ctx).Create(m).Error
 }
 
-func (r *organizationApplicationRepository) GetByOrganizationAndApplication(
-	ctx context.Context,
-	organizationID,
-	applicationID string,
-) (*entity.OrganizationApplication, error) {
-	var orgAppModel model.OrganizationApplication
+func (r *organizationApplicationRepository) GetByOrganizationAndApplication(ctx context.Context, organizationID, applicationID uuid.UUID) (*entity.OrganizationApplication, error) {
+	var m model.OrganizationApplication
 	result := r.db.WithContext(ctx).
 		Where("organization_id = ? AND application_id = ?", organizationID, applicationID).
-		First(&orgAppModel)
-
+		First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, organizationapplication.ErrNotFound
+		return nil, nil
 	}
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return orgAppModel.ToEntity(), nil
+	return m.ToEntity(), nil
 }
 
-func (r *organizationApplicationRepository) SetActive(ctx context.Context, organizationID, applicationID string, isActive bool) error {
+func (r *organizationApplicationRepository) SetActive(ctx context.Context, organizationID, applicationID uuid.UUID, isActive bool) error {
 	result := r.db.WithContext(ctx).
 		Model(&model.OrganizationApplication{}).
 		Where("organization_id = ? AND application_id = ?", organizationID, applicationID).
 		Update("is_active", isActive)
-
 	if result.RowsAffected == 0 {
-		return organizationapplication.ErrNotFound
+		return gorm.ErrRecordNotFound
 	}
-	if result.Error != nil {
-		return result.Error
-	}
-	return nil
+	return result.Error
 }
 
-func (r *organizationApplicationRepository) Delete(ctx context.Context, organizationID, applicationID string) error {
+func (r *organizationApplicationRepository) Delete(ctx context.Context, organizationID, applicationID uuid.UUID) error {
 	return r.db.WithContext(ctx).
 		Where("organization_id = ? AND application_id = ?", organizationID, applicationID).
 		Delete(&model.OrganizationApplication{}).Error
 }
 
-func (r *organizationApplicationRepository) ListApplicationsByOrganization(
-	ctx context.Context,
-	organizationID string,
-) ([]*entity.OrganizationApplication, error) {
-	var orgAppsModel []model.OrganizationApplication
+func (r *organizationApplicationRepository) ListApplicationsByOrganization(ctx context.Context, organizationID uuid.UUID) ([]*entity.OrganizationApplication, error) {
+	var models []model.OrganizationApplication
 	err := r.db.WithContext(ctx).
 		Where("organization_id = ?", organizationID).
-		Find(&orgAppsModel).Error
+		Find(&models).Error
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*entity.OrganizationApplication, len(orgAppsModel))
-	for i, m := range orgAppsModel {
-		result[i] = m.ToEntity()
+	entities := make([]*entity.OrganizationApplication, len(models))
+	for i, m := range models {
+		entities[i] = m.ToEntity()
 	}
-	return result, nil
+	return entities, nil
 }
 
-func (r *organizationApplicationRepository) ListOrganizationsByApplication(
-	ctx context.Context,
-	applicationID string,
-	limit,
-	offset int,
-) ([]*entity.OrganizationApplication, error) {
-	var orgAppsModel []model.OrganizationApplication
+func (r *organizationApplicationRepository) ListOrganizationsByApplication(ctx context.Context, applicationID uuid.UUID, limit, offset int) ([]*entity.OrganizationApplication, error) {
+	var models []model.OrganizationApplication
 	err := r.db.WithContext(ctx).
 		Where("application_id = ?", applicationID).
-		Find(&orgAppsModel).Error
+		Limit(limit).Offset(offset).
+		Find(&models).Error
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*entity.OrganizationApplication, len(orgAppsModel))
-	for i, m := range orgAppsModel {
-		result[i] = m.ToEntity()
+	entities := make([]*entity.OrganizationApplication, len(models))
+	for i, m := range models {
+		entities[i] = m.ToEntity()
 	}
-	return result, nil
+	return entities, nil
 }
