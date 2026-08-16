@@ -35,7 +35,7 @@ type loginUsecase struct {
 	userRepo     user.Repository
 	userRoleRepo userrole.Repository
 	rolePermRepo rolepermission.Repository
-	token        service.Token
+	jwtService   service.JWTService
 	logger       service.Logger
 }
 
@@ -43,14 +43,14 @@ func NewLoginUsecase(
 	userRepo user.Repository,
 	userRoleRepo userrole.Repository,
 	rolePermRepo rolepermission.Repository,
-	token service.Token,
+	jwtService service.JWTService,
 	logger service.Logger,
 ) LoginUsecase {
 	return &loginUsecase{
 		userRepo:     userRepo,
 		userRoleRepo: userRoleRepo,
 		rolePermRepo: rolePermRepo,
-		token:        token,
+		jwtService:   jwtService,
 		logger:       logger,
 	}
 }
@@ -143,7 +143,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 	}
 
 	// 7. Generate access token
-	accessToken, err := uc.token.GenerateAccessToken(ctx, claims)
+	accessToken, err := uc.jwtService.GenerateAccessToken(ctx, claims)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to generate access token",
 			"user_id", u.ID,
@@ -153,7 +153,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 	}
 
 	// 8. Generate refresh token
-	refreshToken, err := uc.token.GenerateRefreshToken()
+	refreshToken, err := uc.jwtService.GenerateRefreshToken()
 	if err != nil {
 		uc.logger.Error(ctx, "failed to generate refresh token",
 			"user_id", u.ID,
@@ -162,15 +162,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 		return nil, errors.New("failed to generate refresh token")
 	}
 
-	// 9. Store refresh token
-	err = uc.token.StoreRefreshToken(ctx, u.ID.String(), refreshToken)
-	if err != nil {
-		uc.logger.Error(ctx, "failed to store refresh token",
-			"user_id", u.ID,
-			"error", err.Error(),
-		)
-		return nil, errors.New("failed to store refresh token")
-	}
+	// TODO: Store refresh token hash via oauthrefreshtoken repository
 
 	return &LoginOutput{
 		User:         u,
