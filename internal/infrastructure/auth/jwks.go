@@ -6,62 +6,33 @@ import (
 	"math/big"
 )
 
-type JWKSService interface {
-	GetJWKS(publicKey *rsa.PublicKey, keyID string) (*JWKSResponse, error)
-}
-
 type JWKSResponse struct {
 	Keys []JWK `json:"keys"`
 }
 
 type JWK struct {
-	Kty string `json:"kty"`
+	KTY string `json:"kty"`
 	Use string `json:"use"`
 	Alg string `json:"alg"`
-	Kid string `json:"kid"`
+	KID string `json:"kid"`
 	N   string `json:"n"`
 	E   string `json:"e"`
 }
 
-type jwksService struct{}
+// BuildJWKS constructs the JWKS response from a public key and key ID.
+// This is static configuration — no database or runtime state involved.
+func BuildJWKS(publicKey *rsa.PublicKey, keyID string) *JWKSResponse {
+	n := base64.RawURLEncoding.EncodeToString(publicKey.N.Bytes())
+	e := base64.RawURLEncoding.EncodeToString(big.NewInt(int64(publicKey.E)).Bytes())
 
-func NewJWKSService() JWKSService {
-	return &jwksService{}
-}
-
-func (s *jwksService) GetJWKS(publicKey *rsa.PublicKey, keyID string) (*JWKSResponse, error) {
-	if publicKey == nil {
-		return nil, ErrNilPublicKey
+	return &JWKSResponse{
+		Keys: []JWK{{
+			KTY: "RSA",
+			Use: "sig",
+			Alg: "RS256",
+			KID: keyID,
+			N:   n,
+			E:   e,
+		}},
 	}
-
-	nBytes := publicKey.N.Bytes()
-	n := base64.RawURLEncoding.EncodeToString(nBytes)
-
-	eBytes := big.NewInt(int64(publicKey.E)).Bytes()
-	e := base64.RawURLEncoding.EncodeToString(eBytes)
-
-	jwk := JWK{
-		Kty: "RSA",
-		Use: "sig",
-		Alg: "RS256",
-		Kid: keyID,
-		N:   n,
-		E:   e,
-	}
-
-	response := &JWKSResponse{
-		Keys: []JWK{jwk},
-	}
-
-	return response, nil
-}
-
-var ErrNilPublicKey = &jwksError{message: "public key cannot be nil"}
-
-type jwksError struct {
-	message string
-}
-
-func (e *jwksError) Error() string {
-	return e.message
 }

@@ -1,11 +1,5 @@
 package auth
 
-import "errors"
-
-type OIDCService interface {
-	GetDiscovery(issuerURL string) (*OpenIDConfiguration, error)
-}
-
 type OpenIDConfiguration struct {
 	Issuer                            string   `json:"issuer"`
 	AuthorizationEndpoint             string   `json:"authorization_endpoint"`
@@ -22,18 +16,8 @@ type OpenIDConfiguration struct {
 	IDTokenSigningAlgValuesSupported  []string `json:"id_token_signing_alg_values_supported"`
 }
 
-type oidcService struct{}
-
-func NewOIDCService() OIDCService {
-	return &oidcService{}
-}
-
-func (s *oidcService) GetDiscovery(issuerURL string) (*OpenIDConfiguration, error) {
-
-	if issuerURL == "" {
-		return nil, errors.New("issuerURL is invalid")
-	}
-	data := &OpenIDConfiguration{
+func BuildOpenIDConfiguration(issuerURL string) *OpenIDConfiguration {
+	return &OpenIDConfiguration{
 		Issuer:                            issuerURL,
 		AuthorizationEndpoint:             issuerURL + "/authorize",
 		TokenEndpoint:                     issuerURL + "/token",
@@ -41,13 +25,11 @@ func (s *oidcService) GetDiscovery(issuerURL string) (*OpenIDConfiguration, erro
 		JwksURI:                           issuerURL + "/.well-known/jwks.json",
 		RevocationEndpoint:                issuerURL + "/revoke",
 		ScopesSupported:                   []string{"openid", "profile", "email", "offline_access"},
-		ResponseTypesSupported:            []string{},
-		GrantTypesSupported:               []string{},
-		TokenEndpointAuthMethodsSupported: []string{},
-		CodeChallengeMethodsSupported:     []string{},
-		SubjectTypesSupported:             []string{},
-		IDTokenSigningAlgValuesSupported:  []string{},
+		ResponseTypesSupported:            []string{"code"},
+		GrantTypesSupported:               []string{"authorization_code", "refresh_token"},
+		TokenEndpointAuthMethodsSupported: []string{"client_secret_post", "client_secret_basic"},
+		CodeChallengeMethodsSupported:     []string{"S256"},
+		SubjectTypesSupported:             []string{"public"},
+		IDTokenSigningAlgValuesSupported:  []string{"RS256"},
 	}
-
-	return data, nil
 }
