@@ -40,12 +40,10 @@ func NewRegisterUsecase(
 }
 
 func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (*RegisterOutput, error) {
-	// 1. Validate password length
 	if len(params.Password) < 8 {
 		return nil, errors.New("password must be at least 8 characters")
 	}
 
-	// 2. Check if email already exists
 	existingUser, _ := uc.userRepo.GetByEmail(ctx, params.Email)
 	if existingUser != nil {
 		uc.logger.Warn(ctx, "registration failed: email already exists",
@@ -54,7 +52,6 @@ func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (
 		return nil, errors.New("email already registered")
 	}
 
-	// 3. Hash password
 	hashedPassword, err := hash.Hash(params.Password)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to hash password",
@@ -64,7 +61,6 @@ func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (
 		return nil, errors.New("failed to process registration")
 	}
 
-	// 4. Create user entity
 	now := time.Now()
 	u := &entity.User{
 		ID:           uuid.Must(uuid.NewV7()),
@@ -76,7 +72,6 @@ func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (
 		UpdatedAt:    now,
 	}
 
-	// 5. Persist
 	err = uc.userRepo.Create(ctx, u)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to create user",

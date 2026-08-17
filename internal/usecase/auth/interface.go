@@ -9,3 +9,7 @@ type LoginUsecase interface {
 type RegisterUsecase interface {
 	Execute(ctx context.Context, params RegisterParams) (*RegisterOutput, error)
 }
+
+type AuthorizeUsecase interface {
+	Execute(ctx context.Context, params AuthorizeParams) (*AuthorizeOutput, error)
+}

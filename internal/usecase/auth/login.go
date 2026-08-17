@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/rolepermission"
@@ -56,7 +56,6 @@ func NewLoginUsecase(
 }
 
 func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*LoginOutput, error) {
-	// 1. Lookup user by email
 	u, err := uc.userRepo.GetByEmail(ctx, params.Email)
 	if err != nil {
 		uc.logger.Warn(ctx, "failed to fetch user by email",
@@ -69,7 +68,6 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 		return nil, errors.New("email or password is invalid")
 	}
 
-	// 2. Verify status
 	if u.Status != "active" {
 		uc.logger.Warn(ctx, "login attempt on inactive account",
 			"user_id", u.ID,
@@ -78,7 +76,6 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 		return nil, errors.New("account is not active")
 	}
 
-	// 3. Verify password
 	if !hash.CheckHash(u.PasswordHash, params.Password) {
 		uc.logger.Warn(ctx, "invalid password",
 			"user_id", u.ID,
@@ -86,7 +83,6 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 		return nil, errors.New("email or password is invalid")
 	}
 
-	// 4. Query roles for this user + application + organization
 	roles, err := uc.userRoleRepo.ListRolesByUser(ctx, u.ID, params.OrgID)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to fetch roles",
@@ -96,7 +92,6 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 		return nil, errors.New("failed to fetch user roles")
 	}
 
-	// 5. Collect role slugs and permissions
 	roleSlugs := make([]string, 0, len(roles))
 	permSet := make(map[string]struct{})
 
@@ -117,7 +112,6 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 		permSlugs = append(permSlugs, k)
 	}
 
-	// 6. Build claims
 	now := time.Now()
 	expiresIn := 15 * time.Minute
 
@@ -142,7 +136,6 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 		claims.OrgID = &orgIDStr
 	}
 
-	// 7. Generate access token
 	accessToken, err := uc.jwtService.GenerateAccessToken(ctx, claims)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to generate access token",
@@ -152,7 +145,6 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 		return nil, errors.New("failed to generate access token")
 	}
 
-	// 8. Generate refresh token
 	refreshToken, err := uc.jwtService.GenerateRefreshToken()
 	if err != nil {
 		uc.logger.Error(ctx, "failed to generate refresh token",

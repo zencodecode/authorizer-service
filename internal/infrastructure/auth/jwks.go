@@ -19,8 +19,6 @@ type JWK struct {
 	E   string `json:"e"`
 }
 
-// BuildJWKS constructs the JWKS response from a public key and key ID.
-// This is static configuration — no database or runtime state involved.
 func BuildJWKS(publicKey *rsa.PublicKey, keyID string) *JWKSResponse {
 	n := base64.RawURLEncoding.EncodeToString(publicKey.N.Bytes())
 	e := base64.RawURLEncoding.EncodeToString(big.NewInt(int64(publicKey.E)).Bytes())
