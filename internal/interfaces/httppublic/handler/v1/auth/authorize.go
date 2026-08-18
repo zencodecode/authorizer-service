@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zencodecode/authorizer-service/internal/domain/service"
 	"github.com/zencodecode/authorizer-service/internal/usecase/auth"
 	"github.com/zencodecode/authorizer-service/pkg/response"
 )
@@ -22,11 +21,6 @@ type AuthorizeRequest struct {
 	CodeChallengeMethod string `form:"code_challenge_method"`
 }
 
-type AuthorizeHandler struct {
-	authorizeUC auth.AuthorizeUsecase
-	logger      service.Logger
-}
-
 func (h *Handler) Authorize(c *gin.Context) {
 	var req AuthorizeRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -36,30 +30,39 @@ func (h *Handler) Authorize(c *gin.Context) {
 
 	params := toAuthorizeParams(req)
 
-	output, err := h.authorizeUC.Execute(c.Request.Context(), params)
+	result, err := h.authorizeUC.Execute(c.Request.Context(), params)
 	if err != nil {
 		h.handleAuthorizeError(c, params, err)
 		return
 	}
 
-	_ = output
+	// TODO: Store result in session and render login page
+	// For now, return as JSON (placeholder until login page is implemented)
+	c.JSON(http.StatusOK, gin.H{
+		"action":           "show_login",
+		"application_name": result.ApplicationName,
+		"scopes":           result.Scopes,
+		"requires_org":     result.RequiresOrganization,
+	})
 }
 
 func (h *Handler) handleAuthorizeError(c *gin.Context, params auth.AuthorizeParams, err error) {
-	if err != nil {
-		var authErr *auth.AuthorizeError
+	var authErr *auth.AuthorizeError
 
-		switch {
-		case errors.As(err, &authErr):
-			redirectWithError(c, params.RedirectURI, params.State, authErr.Code, authErr.Description)
+	switch {
+	// Redirect-safe errors: redirect back to client with error params
+	case errors.As(err, &authErr):
+		redirectWithError(c, params.RedirectURI, params.State, authErr.Code, authErr.Description)
 
-		case errors.Is(err, auth.ErrInvalidClient), errors.Is(err, auth.ErrRedirectURINotRegistered):
-			renderErrorPage(c, 500, err.Error())
+	// Non-redirect errors: show error page directly (NEVER redirect to unvalidated URI)
+	case errors.Is(err, auth.ErrInvalidClient):
+		renderErrorPage(c, http.StatusBadRequest, "Invalid client application")
 
-		default:
-			renderErrorPage(c, 500, "internal error")
-		}
-		return
+	case errors.Is(err, auth.ErrRedirectURINotRegistered):
+		renderErrorPage(c, http.StatusBadRequest, "Redirect URI is not registered for this application")
+
+	default:
+		renderErrorPage(c, http.StatusInternalServerError, "An unexpected error occurred")
 	}
 }
 
@@ -80,10 +83,15 @@ func toAuthorizeParams(r AuthorizeRequest) auth.AuthorizeParams {
 	}
 }
 
-func redirectWithError(c *gin.Context, redirectURI, state, code, description string) {
-	u, _ := url.Parse(redirectURI)
+func redirectWithError(c *gin.Context, redirectURI, state, errCode, description string) {
+	u, parseErr := url.Parse(redirectURI)
+	if parseErr != nil {
+		renderErrorPage(c, http.StatusInternalServerError, "Invalid redirect URI")
+		return
+	}
+
 	q := u.Query()
-	q.Set("error", code)
+	q.Set("error", errCode)
 	if description != "" {
 		q.Set("error_description", description)
 	}
@@ -91,12 +99,14 @@ func redirectWithError(c *gin.Context, redirectURI, state, code, description str
 		q.Set("state", state)
 	}
 	u.RawQuery = q.Encode()
-	http.Redirect(c.Writer, c.Request, u.String(), http.StatusFound)
+
+	c.Redirect(http.StatusFound, u.String())
 }
 
 func renderErrorPage(c *gin.Context, status int, message string) {
-	c.HTML(status, "error.html", gin.H{
-		"Code":    status,
-		"Message": message,
+	// TODO: Replace with proper HTML template when login UI is implemented
+	c.JSON(status, gin.H{
+		"error":   http.StatusText(status),
+		"message": message,
 	})
 }
