@@ -3,16 +3,23 @@ package auth
 import (
 	"github.com/zencodecode/authorizer-service/internal/config"
 	"github.com/zencodecode/authorizer-service/internal/domain/service"
+	"github.com/zencodecode/authorizer-service/internal/usecase/auth"
 )
 
 type Handler struct {
-	cfg    *config.Config
-	logger service.Logger
+	authorizeUC auth.AuthorizeUsecase
+	cfg         *config.Config
+	logger      service.Logger
 }
 
-func New(cfg *config.Config, logger service.Logger) *Handler {
+func New(
+	authorizeUC auth.AuthorizeUsecase,
+	cfg *config.Config,
+	logger service.Logger,
+) *Handler {
 	return &Handler{
-		cfg:    cfg,
-		logger: logger,
+		authorizeUC: authorizeUC,
+		cfg:         cfg,
+		logger:      logger,
 	}
 }

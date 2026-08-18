@@ -3,12 +3,32 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/application"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/applicationscope"
 	"github.com/zencodecode/authorizer-service/internal/domain/service"
 )
+
+var (
+	ErrInvalidClient            = errors.New("invalid client_id")
+	ErrRedirectURINotRegistered = errors.New("redirect_uri not registered for this client")
+)
+
+type AuthorizeError struct {
+	Code        string
+	Description string
+}
+
+func (e *AuthorizeError) Error() string {
+	return fmt.Sprintf("%s: %s", e.Code, e.Description)
+}
+
+func newAuthorizeError(code, description string) *AuthorizeError {
+	return &AuthorizeError{Code: code, Description: description}
+}
 
 type (
 	AuthorizeParams struct {
@@ -21,7 +41,7 @@ type (
 		CodeChallengeMethod string
 	}
 
-	AuthorizeOutput struct {
+	AuthorizeResult struct {
 		ResponseType        string
 		ClientID            string
 		RedirectURI         string
@@ -50,24 +70,24 @@ func NewAuthorizeUsecase(
 	}
 }
 
-func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams) (*AuthorizeOutput, error) {
-	if params.ResponseType != "code" {
-		return nil, errors.New("unsupported response type")
-	}
-
+func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams) (*AuthorizeResult, error) {
 	app, err := uc.appRepo.GetByClientID(ctx, params.ClientID)
 	if err != nil {
 		uc.logger.Warn(ctx, "authorize failed: invalid client_id",
 			"client_id", params.ClientID,
 		)
-		return nil, errors.New("client not found")
+		return nil, ErrInvalidClient
 	}
 
-	if isRedirectURIAllowed(app.RedirectURIs, params.RedirectURI) {
+	if !isRedirectURIAllowed(app.RedirectURIs, params.RedirectURI) {
 		uc.logger.Warn(ctx, "authorize failed: redirect_uri not registered for this client",
 			"client_id", params.ClientID,
 		)
-		return nil, errors.New("redirect_uri not registered for this client")
+		return nil, ErrRedirectURINotRegistered
+	}
+
+	if params.ResponseType != "code" {
+		return nil, newAuthorizeError("unsupported_response_type", "only 'code' response_type is supported")
 	}
 
 	for _, scope := range params.Scope {
@@ -75,20 +95,29 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 		if err != nil {
 			uc.logger.Warn(ctx, "authorize failed: invalid scope",
 				"client_id", params.ClientID,
+				"scope", scope,
 			)
-			return nil, errors.New("scope not found")
+			return nil, newAuthorizeError("invalid_scope", fmt.Sprintf("scope %q is not registered for this client", scope))
 		}
 	}
 
 	if params.CodeChallengeMethod != "S256" {
-		return nil, errors.New("invalid challenge method")
+		return nil, newAuthorizeError("invalid_request", "code_challenge_method must be S256")
 	}
 
 	if params.CodeChallenge == "" || len(params.CodeChallenge) < 43 {
-		return nil, errors.New("invalid code challenge")
+		return nil, newAuthorizeError("invalid_request", "code_challenge is missing or too short")
 	}
 
-	return nil, nil
+	return &AuthorizeResult{
+		ResponseType:        params.ResponseType,
+		ClientID:            params.ClientID,
+		RedirectURI:         params.RedirectURI,
+		Scope:               strings.Join(params.Scope, " "),
+		State:               params.State,
+		CodeChallenge:       params.CodeChallenge,
+		CodeChallengeMethod: params.CodeChallengeMethod,
+	}, nil
 }
 
 func isRedirectURIAllowed(registered []string, requested string) bool {

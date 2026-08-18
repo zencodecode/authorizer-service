@@ -11,5 +11,5 @@ type RegisterUsecase interface {
 }
 
 type AuthorizeUsecase interface {
-	Execute(ctx context.Context, params AuthorizeParams) (*AuthorizeOutput, error)
+	Execute(ctx context.Context, params AuthorizeParams) (*AuthorizeResult, error)
 }
