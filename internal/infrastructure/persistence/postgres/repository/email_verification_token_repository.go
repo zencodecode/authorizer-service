@@ -29,7 +29,7 @@ func (r *emailVerificationTokenRepository) GetByTokenHash(ctx context.Context, t
 	var m model.EmailVerificationToken
 	result := r.db.WithContext(ctx).Where("token_hash = ?", tokenHash).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, emailverificationtoken.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error

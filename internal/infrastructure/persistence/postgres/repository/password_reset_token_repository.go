@@ -29,7 +29,7 @@ func (r *passwordResetTokenRepository) GetByTokenHash(ctx context.Context, token
 	var m model.PasswordResetToken
 	result := r.db.WithContext(ctx).Where("token_hash = ?", tokenHash).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, passwordresettoken.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error

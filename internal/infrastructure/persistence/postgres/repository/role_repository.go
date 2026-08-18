@@ -28,7 +28,7 @@ func (r *roleRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Rol
 	var m model.Role
 	result := r.db.WithContext(ctx).Where("id = ?", id).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, role.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error
@@ -47,7 +47,7 @@ func (r *roleRepository) GetBySlug(ctx context.Context, organizationID *uuid.UUI
 
 	result := query.First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, role.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error

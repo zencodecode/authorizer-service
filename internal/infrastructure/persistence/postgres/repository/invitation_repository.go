@@ -28,7 +28,7 @@ func (r *invitationRepository) GetByID(ctx context.Context, id uuid.UUID) (*enti
 	var m model.Invitation
 	result := r.db.WithContext(ctx).Where("id = ?", id).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, invitation.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error
@@ -40,7 +40,7 @@ func (r *invitationRepository) GetByToken(ctx context.Context, token string) (*e
 	var m model.Invitation
 	result := r.db.WithContext(ctx).Where("token = ?", token).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, invitation.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error
@@ -54,7 +54,7 @@ func (r *invitationRepository) UpdateStatus(ctx context.Context, id uuid.UUID, s
 		Where("id = ?", id).
 		Update("status", status)
 	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
+		return invitation.ErrNotFound
 	}
 	return result.Error
 }

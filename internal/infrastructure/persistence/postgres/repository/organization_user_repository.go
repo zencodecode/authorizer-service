@@ -30,7 +30,7 @@ func (r *organizationUserRepository) GetByOrganizationAndUser(ctx context.Contex
 		Where("organization_id = ? AND user_id = ?", organizationID, userID).
 		First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, organizationuser.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error
@@ -44,7 +44,7 @@ func (r *organizationUserRepository) UpdateStatus(ctx context.Context, organizat
 		Where("organization_id = ? AND user_id = ?", organizationID, userID).
 		Update("status", status)
 	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
+		return organizationuser.ErrNotFound
 	}
 	return result.Error
 }

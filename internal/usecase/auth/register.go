@@ -19,7 +19,7 @@ type (
 		Name     string
 	}
 
-	RegisterOutput struct {
+	RegisterResult struct {
 		User *entity.User
 	}
 )
@@ -39,7 +39,7 @@ func NewRegisterUsecase(
 	}
 }
 
-func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (*RegisterOutput, error) {
+func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (*RegisterResult, error) {
 	if len(params.Password) < 8 {
 		return nil, errors.New("password must be at least 8 characters")
 	}
@@ -88,5 +88,5 @@ func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (
 		"email", u.Email,
 	)
 
-	return &RegisterOutput{User: u}, nil
+	return &RegisterResult{User: u}, nil
 }

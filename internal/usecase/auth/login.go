@@ -23,7 +23,7 @@ type (
 		OrgID         *uuid.UUID
 	}
 
-	LoginOutput struct {
+	LoginResult struct {
 		User         *entity.User
 		AccessToken  string
 		RefreshToken string
@@ -55,7 +55,7 @@ func NewLoginUsecase(
 	}
 }
 
-func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*LoginOutput, error) {
+func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*LoginResult, error) {
 	u, err := uc.userRepo.GetByEmail(ctx, params.Email)
 	if err != nil {
 		uc.logger.Warn(ctx, "failed to fetch user by email",
@@ -156,7 +156,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 
 	// TODO: Store refresh token hash via oauthrefreshtoken repository
 
-	return &LoginOutput{
+	return &LoginResult{
 		User:         u,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,

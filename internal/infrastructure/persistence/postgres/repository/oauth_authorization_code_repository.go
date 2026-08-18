@@ -29,7 +29,7 @@ func (r *oauthAuthorizationCodeRepository) GetByCodeHash(ctx context.Context, co
 	var m model.OAuthAuthorizationCode
 	result := r.db.WithContext(ctx).Where("code_hash = ?", codeHash).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, oauthauthorizationcode.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error

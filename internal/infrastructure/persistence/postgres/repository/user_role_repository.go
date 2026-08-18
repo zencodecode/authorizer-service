@@ -45,7 +45,7 @@ func (r *userRoleRepository) HasRole(ctx context.Context, userID uuid.UUID, orga
 
 	result := query.First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return false, nil
+		return false, userrole.ErrNotFound
 	}
 	if result.Error != nil {
 		return false, result.Error

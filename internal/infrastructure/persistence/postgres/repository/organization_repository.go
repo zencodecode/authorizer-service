@@ -28,7 +28,7 @@ func (r *organizationRepository) GetByID(ctx context.Context, id uuid.UUID) (*en
 	var m model.Organization
 	result := r.db.WithContext(ctx).Where("id = ?", id).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, organization.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error
@@ -40,7 +40,7 @@ func (r *organizationRepository) GetBySlug(ctx context.Context, slug string) (*e
 	var m model.Organization
 	result := r.db.WithContext(ctx).Where("slug = ?", slug).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, organization.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error

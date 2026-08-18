@@ -30,7 +30,7 @@ func (r *organizationApplicationRepository) GetByOrganizationAndApplication(ctx 
 		Where("organization_id = ? AND application_id = ?", organizationID, applicationID).
 		First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, organizationapplication.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error
@@ -44,7 +44,7 @@ func (r *organizationApplicationRepository) SetActive(ctx context.Context, organ
 		Where("organization_id = ? AND application_id = ?", organizationID, applicationID).
 		Update("is_active", isActive)
 	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
+		return organizationapplication.ErrNotFound
 	}
 	return result.Error
 }

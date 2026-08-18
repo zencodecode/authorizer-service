@@ -3,11 +3,11 @@ package auth
 import "context"
 
 type LoginUsecase interface {
-	Execute(ctx context.Context, params LoginParams) (*LoginOutput, error)
+	Execute(ctx context.Context, params LoginParams) (*LoginResult, error)
 }
 
 type RegisterUsecase interface {
-	Execute(ctx context.Context, params RegisterParams) (*RegisterOutput, error)
+	Execute(ctx context.Context, params RegisterParams) (*RegisterResult, error)
 }
 
 type AuthorizeUsecase interface {

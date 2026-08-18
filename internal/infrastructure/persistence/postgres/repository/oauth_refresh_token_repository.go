@@ -29,7 +29,7 @@ func (r *oauthRefreshTokenRepository) GetByTokenHash(ctx context.Context, tokenH
 	var m model.OAuthRefreshToken
 	result := r.db.WithContext(ctx).Where("token_hash = ?", tokenHash).First(&m)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, nil
+		return nil, oauthrefreshtoken.ErrNotFound
 	}
 	if result.Error != nil {
 		return nil, result.Error

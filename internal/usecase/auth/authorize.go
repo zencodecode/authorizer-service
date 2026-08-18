@@ -72,12 +72,10 @@ func NewAuthorizeUsecase(
 }
 
 func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams) (*AuthorizeResult, error) {
-	// 1. Validate response_type (check early before any DB call)
 	if params.ResponseType != "code" {
 		return nil, newAuthorizeError("unsupported_response_type", "only 'code' response_type is supported")
 	}
 
-	// 2. Lookup and validate application
 	app, err := uc.appRepo.GetByClientID(ctx, params.ClientID)
 	if err != nil {
 		uc.logger.Error(ctx, "authorize: failed to query application",
@@ -86,14 +84,7 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 		)
 		return nil, ErrInvalidClient
 	}
-	if app == nil || !app.IsActive {
-		uc.logger.Warn(ctx, "authorize: invalid or inactive client",
-			"client_id", params.ClientID,
-		)
-		return nil, ErrInvalidClient
-	}
 
-	// 3. Validate redirect_uri (MUST check before redirecting any error)
 	if !isRedirectURIAllowed(app.RedirectURIs, params.RedirectURI) {
 		uc.logger.Warn(ctx, "authorize: redirect_uri not registered",
 			"client_id", params.ClientID,
@@ -102,9 +93,6 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 		return nil, ErrRedirectURINotRegistered
 	}
 
-	// From here, errors can be safely redirected back to client
-
-	// 4. Validate PKCE
 	if params.CodeChallengeMethod != "S256" {
 		return nil, newAuthorizeError("invalid_request", "code_challenge_method must be S256")
 	}
@@ -112,7 +100,6 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 		return nil, newAuthorizeError("invalid_request", "code_challenge is required and must be at least 43 characters")
 	}
 
-	// 5. Validate scopes
 	if len(params.Scope) == 0 {
 		return nil, newAuthorizeError("invalid_scope", "at least one scope is required")
 	}
@@ -130,7 +117,6 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 		}
 	}
 
-	// 6. Validation passed — return result for handler to proceed (show login page)
 	return &AuthorizeResult{
 		ClientID:             app.ClientID,
 		RedirectURI:          params.RedirectURI,
