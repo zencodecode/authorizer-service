@@ -1,7 +1,9 @@
-package stringopr
+package randutil
 
 import (
 	"crypto/md5"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 
@@ -29,4 +31,12 @@ func GenerateRandomStringFromString(input string) string {
 	hashString := hex.EncodeToString(hashBytes)
 
 	return hashString
+}
+
+func GenerateRandomString(n int) (string, error) {
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
 }

@@ -59,6 +59,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 	u, err := uc.userRepo.GetByEmail(ctx, params.Email)
 	if err != nil {
 		uc.logger.Warn(ctx, "failed to fetch user by email",
+			"action", "LOGIN",
 			"email", params.Email,
 			"error", err.Error(),
 		)
@@ -70,6 +71,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 
 	if u.Status != "active" {
 		uc.logger.Warn(ctx, "login attempt on inactive account",
+			"action", "LOGIN",
 			"user_id", u.ID,
 			"status", u.Status,
 		)
@@ -78,6 +80,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 
 	if !hash.CheckHash(u.PasswordHash, params.Password) {
 		uc.logger.Warn(ctx, "invalid password",
+			"action", "LOGIN",
 			"user_id", u.ID,
 		)
 		return nil, errors.New("email or password is invalid")
@@ -86,6 +89,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 	roles, err := uc.userRoleRepo.ListRolesByUser(ctx, u.ID, params.OrgID)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to fetch roles",
+			"action", "LOGIN",
 			"user_id", u.ID,
 			"error", err.Error(),
 		)
@@ -139,6 +143,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 	accessToken, err := uc.jwtService.GenerateAccessToken(ctx, claims)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to generate access token",
+			"action", "LOGIN",
 			"user_id", u.ID,
 			"error", err.Error(),
 		)
@@ -148,6 +153,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 	refreshToken, err := uc.jwtService.GenerateRefreshToken()
 	if err != nil {
 		uc.logger.Error(ctx, "failed to generate refresh token",
+			"action", "LOGIN",
 			"user_id", u.ID,
 			"error", err.Error(),
 		)

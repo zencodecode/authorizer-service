@@ -30,20 +30,13 @@ func (h *Handler) Authorize(c *gin.Context) {
 
 	params := toAuthorizeParams(req)
 
-	result, err := h.authorizeUC.Execute(c.Request.Context(), params)
+	output, err := h.authorizeUC.Execute(c.Request.Context(), params)
 	if err != nil {
 		h.handleAuthorizeError(c, params, err)
 		return
 	}
 
-	// TODO: Store result in session and render login page
-	// For now, return as JSON (placeholder until login page is implemented)
-	c.JSON(http.StatusOK, gin.H{
-		"action":           "show_login",
-		"application_name": result.ApplicationName,
-		"scopes":           result.Scopes,
-		"requires_org":     result.RequiresOrganization,
-	})
+	c.Redirect(http.StatusFound, "/login?login_challenge="+output.LoginChallengeID)
 }
 
 func (h *Handler) handleAuthorizeError(c *gin.Context, params auth.AuthorizeParams, err error) {

@@ -47,6 +47,7 @@ func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (
 	existingUser, _ := uc.userRepo.GetByEmail(ctx, params.Email)
 	if existingUser != nil {
 		uc.logger.Warn(ctx, "registration failed: email already exists",
+			"action", "REGISTER",
 			"email", params.Email,
 		)
 		return nil, errors.New("email already registered")
@@ -55,6 +56,7 @@ func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (
 	hashedPassword, err := hash.Hash(params.Password)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to hash password",
+			"action", "REGISTER",
 			"email", params.Email,
 			"error", err.Error(),
 		)
@@ -75,6 +77,7 @@ func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (
 	err = uc.userRepo.Create(ctx, u)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to create user",
+			"action", "REGISTER",
 			"email", params.Email,
 			"error", err.Error(),
 		)
@@ -84,6 +87,7 @@ func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (
 	// TODO: Generate email verification token and send email
 
 	uc.logger.Info(ctx, "user registered successfully",
+		"action", "REGISTER",
 		"user_id", u.ID,
 		"email", u.Email,
 	)

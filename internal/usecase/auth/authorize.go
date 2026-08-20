@@ -6,10 +6,14 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
+	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/application"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/applicationscope"
+	"github.com/zencodecode/authorizer-service/internal/domain/repository/authorizesession"
 	"github.com/zencodecode/authorizer-service/internal/domain/service"
+	"github.com/zencodecode/authorizer-service/pkg/randutil"
 )
 
 var (
@@ -50,24 +54,28 @@ type (
 		CodeChallengeMethod  string
 		RequiresOrganization bool
 		ApplicationName      string
+		LoginChallengeID     string
 	}
 )
 
 type authorizeUsecase struct {
-	appRepo   application.Repository
-	scopeRepo applicationscope.Repository
-	logger    service.Logger
+	appRepo     application.Repository
+	scopeRepo   applicationscope.Repository
+	sessionRepo authorizesession.Repository
+	logger      service.Logger
 }
 
 func NewAuthorizeUsecase(
 	appRepo application.Repository,
 	scopeRepo applicationscope.Repository,
+	sessionRepo authorizesession.Repository,
 	logger service.Logger,
 ) AuthorizeUsecase {
 	return &authorizeUsecase{
-		appRepo:   appRepo,
-		scopeRepo: scopeRepo,
-		logger:    logger,
+		appRepo:     appRepo,
+		scopeRepo:   scopeRepo,
+		sessionRepo: sessionRepo,
+		logger:      logger,
 	}
 }
 
@@ -78,7 +86,8 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 
 	app, err := uc.appRepo.GetByClientID(ctx, params.ClientID)
 	if err != nil {
-		uc.logger.Error(ctx, "authorize: failed to query application",
+		uc.logger.Error(ctx, "failed to query application",
+			"action", "AUTHORIZE",
 			"client_id", params.ClientID,
 			"error", err.Error(),
 		)
@@ -86,7 +95,8 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 	}
 
 	if !isRedirectURIAllowed(app.RedirectURIs, params.RedirectURI) {
-		uc.logger.Warn(ctx, "authorize: redirect_uri not registered",
+		uc.logger.Warn(ctx, "redirect_uri not registered",
+			"action", "AUTHORIZE",
 			"client_id", params.ClientID,
 			"redirect_uri", params.RedirectURI,
 		)
@@ -106,7 +116,8 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 	for _, scope := range params.Scope {
 		s, err := uc.scopeRepo.GetByApplicationAndScope(ctx, app.ID, scope)
 		if err != nil {
-			uc.logger.Error(ctx, "authorize: failed to query scope",
+			uc.logger.Error(ctx, "failed to query scope",
+				"action", "AUTHORIZE",
 				"scope", scope,
 				"error", err.Error(),
 			)
@@ -115,6 +126,32 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 		if s == nil {
 			return nil, newAuthorizeError("invalid_scope", fmt.Sprintf("scope %q is not registered for this application", scope))
 		}
+	}
+
+	challengeID, err := randutil.GenerateRandomString(32)
+	if err != nil {
+		uc.logger.Error(ctx, "failed to generate challenge id",
+			"action", "AUTHORIZE",
+			"client_id", params.ClientID,
+			"error", err.Error())
+		return nil, newAuthorizeError("server_error", "failed to persist authorize request")
+	}
+
+	sess := entity.AuthorizeSession{
+		ClientID:            params.ClientID,
+		RedirectURI:         params.RedirectURI,
+		Scope:               params.Scope,
+		State:               params.State,
+		CodeChallenge:       params.CodeChallenge,
+		CodeChallengeMethod: params.CodeChallengeMethod,
+	}
+
+	if err := uc.sessionRepo.Save(ctx, challengeID, sess, 10*time.Minute); err != nil {
+		uc.logger.Error(ctx, "failed to save authorize session",
+			"action", "AUTHORIZE",
+			"client_id", params.ClientID,
+			"error", err.Error())
+		return nil, newAuthorizeError("server_error", "failed to persist authorize request")
 	}
 
 	return &AuthorizeResult{
@@ -126,6 +163,7 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 		CodeChallengeMethod:  params.CodeChallengeMethod,
 		RequiresOrganization: app.RequiresOrganization,
 		ApplicationName:      app.Name,
+		LoginChallengeID:     challengeID,
 	}, nil
 }
 
