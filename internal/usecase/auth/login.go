@@ -8,6 +8,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
+	"github.com/zencodecode/authorizer-service/internal/domain/repository/oauthrefreshtoken"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/rolepermission"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/user"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/userrole"
@@ -32,26 +33,29 @@ type (
 )
 
 type loginUsecase struct {
-	userRepo     user.Repository
-	userRoleRepo userrole.Repository
-	rolePermRepo rolepermission.Repository
-	jwtService   service.JWTService
-	logger       service.Logger
+	userRepo         user.Repository
+	userRoleRepo     userrole.Repository
+	rolePermRepo     rolepermission.Repository
+	refreshTokenRepo oauthrefreshtoken.Repository
+	jwtService       service.JWTService
+	logger           service.Logger
 }
 
 func NewLoginUsecase(
 	userRepo user.Repository,
 	userRoleRepo userrole.Repository,
 	rolePermRepo rolepermission.Repository,
+	refreshTokenRepo oauthrefreshtoken.Repository,
 	jwtService service.JWTService,
 	logger service.Logger,
 ) LoginUsecase {
 	return &loginUsecase{
-		userRepo:     userRepo,
-		userRoleRepo: userRoleRepo,
-		rolePermRepo: rolePermRepo,
-		jwtService:   jwtService,
-		logger:       logger,
+		userRepo:         userRepo,
+		userRoleRepo:     userRoleRepo,
+		rolePermRepo:     rolePermRepo,
+		refreshTokenRepo: refreshTokenRepo,
+		jwtService:       jwtService,
+		logger:           logger,
 	}
 }
 
@@ -63,10 +67,18 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 			"email", params.Email,
 			"error", err.Error(),
 		)
-		return nil, errors.New("email or password is invalid")
+		return nil, ErrInvalidCredentials
 	}
 	if u == nil {
-		return nil, errors.New("email or password is invalid")
+		return nil, ErrInvalidCredentials
+	}
+
+	if !hash.CheckHash(u.PasswordHash, params.Password) {
+		uc.logger.Warn(ctx, "invalid password",
+			"action", "LOGIN",
+			"user_id", u.ID,
+		)
+		return nil, ErrInvalidCredentials
 	}
 
 	if u.Status != "active" {
@@ -75,15 +87,16 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 			"user_id", u.ID,
 			"status", u.Status,
 		)
-		return nil, errors.New("account is not active")
+		return nil, ErrAccountSuspended
 	}
 
-	if !hash.CheckHash(u.PasswordHash, params.Password) {
-		uc.logger.Warn(ctx, "invalid password",
+	if u.EmailVerifiedAt != nil {
+		uc.logger.Warn(ctx, "login attempt on unverified account",
 			"action", "LOGIN",
 			"user_id", u.ID,
+			"status", u.Status,
 		)
-		return nil, errors.New("email or password is invalid")
+		return nil, ErrEmailNotVerified
 	}
 
 	roles, err := uc.userRoleRepo.ListRolesByUser(ctx, u.ID, params.OrgID)
