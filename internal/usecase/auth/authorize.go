@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -15,24 +14,6 @@ import (
 	"github.com/zencodecode/authorizer-service/internal/domain/service"
 	"github.com/zencodecode/authorizer-service/pkg/randutil"
 )
-
-var (
-	ErrInvalidClient            = errors.New("invalid client_id")
-	ErrRedirectURINotRegistered = errors.New("redirect_uri not registered for this client")
-)
-
-type AuthorizeError struct {
-	Code        string
-	Description string
-}
-
-func (e *AuthorizeError) Error() string {
-	return fmt.Sprintf("%s: %s", e.Code, e.Description)
-}
-
-func newAuthorizeError(code, description string) *AuthorizeError {
-	return &AuthorizeError{Code: code, Description: description}
-}
 
 type (
 	AuthorizeParams struct {
@@ -81,7 +62,7 @@ func NewAuthorizeUsecase(
 
 func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams) (*AuthorizeResult, error) {
 	if params.ResponseType != "code" {
-		return nil, newAuthorizeError("unsupported_response_type", "only 'code' response_type is supported")
+		return nil, newAuthError("unsupported_response_type", "only 'code' response_type is supported")
 	}
 
 	app, err := uc.appRepo.GetByClientID(ctx, params.ClientID)
@@ -104,14 +85,14 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 	}
 
 	if params.CodeChallengeMethod != "S256" {
-		return nil, newAuthorizeError("invalid_request", "code_challenge_method must be S256")
+		return nil, newAuthError("invalid_request", "code_challenge_method must be S256")
 	}
 	if len(params.CodeChallenge) < 43 {
-		return nil, newAuthorizeError("invalid_request", "code_challenge is required and must be at least 43 characters")
+		return nil, newAuthError("invalid_request", "code_challenge is required and must be at least 43 characters")
 	}
 
 	if len(params.Scope) == 0 {
-		return nil, newAuthorizeError("invalid_scope", "at least one scope is required")
+		return nil, newAuthError("invalid_scope", "at least one scope is required")
 	}
 	for _, scope := range params.Scope {
 		s, err := uc.scopeRepo.GetByApplicationAndScope(ctx, app.ID, scope)
@@ -121,10 +102,10 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 				"scope", scope,
 				"error", err.Error(),
 			)
-			return nil, newAuthorizeError("server_error", "failed to validate scopes")
+			return nil, newAuthError("server_error", "failed to validate scopes")
 		}
 		if s == nil {
-			return nil, newAuthorizeError("invalid_scope", fmt.Sprintf("scope %q is not registered for this application", scope))
+			return nil, newAuthError("invalid_scope", fmt.Sprintf("scope %q is not registered for this application", scope))
 		}
 	}
 
@@ -134,7 +115,7 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 			"action", "AUTHORIZE",
 			"client_id", params.ClientID,
 			"error", err.Error())
-		return nil, newAuthorizeError("server_error", "failed to persist authorize request")
+		return nil, newAuthError("server_error", "failed to generate challenge id")
 	}
 
 	sess := entity.AuthorizeSession{
@@ -151,7 +132,7 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 			"action", "AUTHORIZE",
 			"client_id", params.ClientID,
 			"error", err.Error())
-		return nil, newAuthorizeError("server_error", "failed to persist authorize request")
+		return nil, newAuthError("server_error", "failed to persist authorize request")
 	}
 
 	return &AuthorizeResult{

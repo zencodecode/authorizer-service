@@ -40,7 +40,7 @@ func (h *Handler) Authorize(c *gin.Context) {
 }
 
 func (h *Handler) handleAuthorizeError(c *gin.Context, params auth.AuthorizeParams, err error) {
-	var authErr *auth.AuthorizeError
+	var authErr *auth.AuthError
 
 	switch {
 	// Redirect-safe errors: redirect back to client with error params
