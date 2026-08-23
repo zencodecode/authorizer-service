@@ -152,7 +152,6 @@ func isRedirectURIAllowed(registered []string, requested string) bool {
 	return slices.Contains(registered, requested)
 }
 
-// ScopeString returns scopes as a space-separated string.
 func (r *AuthorizeResult) ScopeString() string {
 	return strings.Join(r.Scopes, " ")
 }

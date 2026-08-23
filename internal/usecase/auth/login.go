@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,6 +19,11 @@ import (
 	"github.com/zencodecode/authorizer-service/pkg/randutil"
 )
 
+type NextAction string
+
+const CONSENT NextAction = "consent"
+const REDIRECT NextAction = "redirect"
+
 type (
 	LoginParams struct {
 		Email       string
@@ -28,9 +34,11 @@ type (
 	LoginResult struct {
 		User              *entity.User
 		Organizations     []*entity.Organization
+		ChallengeID       string
 		AuthorizationCode *string
 		ExpiresAt         *int64
-		Session           *entity.AuthorizeSession
+		NextStep          NextAction
+		RedirectURL       *string
 	}
 )
 
@@ -82,7 +90,7 @@ func NewLoginUsecase(
 func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*LoginResult, error) {
 	u, err := uc.userRepo.GetByEmail(ctx, params.Email)
 	if err != nil {
-		uc.logger.Warn(ctx, "failed to fetch user by email",
+		uc.logger.Warn(ctx, "failed to query user by email",
 			"action", "LOGIN",
 			"email", params.Email,
 			"error", err.Error(),
@@ -121,58 +129,60 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 
 	sess, err := uc.sessionRepo.Get(ctx, params.ChallengeID)
 	if err != nil {
-		uc.logger.Error(ctx, "failed to fetch session params",
+		uc.logger.Error(ctx, "failed to query session params",
 			"action", "LOGIN",
 			"challenge_id", params.ChallengeID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to fetch session params")
+		return nil, newAuthError("server_error", "failed to query session params")
 	}
 
 	app, err := uc.appRepo.GetByClientID(ctx, sess.ClientID)
 	if err != nil {
-		uc.logger.Error(ctx, "failed to fetch application",
+		uc.logger.Error(ctx, "failed to query application",
 			"action", "LOGIN",
 			"client_id", sess.ClientID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to fetch application")
+		return nil, newAuthError("server_error", "failed to query application")
 	}
-	var orgsUser []*entity.OrganizationUser
+
+	sess.UserID = &u.ID
+	if err := uc.sessionRepo.Save(ctx, params.ChallengeID, *sess, 10*time.Minute); err != nil {
+		return nil, newAuthError("server_error", "failed to persist session")
+	}
+
 	if app.RequiresOrganization {
+		var orgsUser []*entity.OrganizationUser
 		orgsUser, err = uc.orgUserRepo.ListOrganizationsByUser(ctx, u.ID)
 		if err != nil {
-			uc.logger.Error(ctx, "failed to fetch organization user",
+			uc.logger.Error(ctx, "failed to query organization user",
 				"action", "LOGIN",
 				"user_id", u.ID,
 				"error", err.Error(),
 			)
-			return nil, newAuthError("server_error", "failed to fetch organization user")
+			return nil, newAuthError("server_error", "failed to query organization user")
 		}
+		orgSet := make([]*entity.Organization, 0, len(orgsUser))
 
-	}
-
-	orgSet := make([]*entity.Organization, 0, len(orgsUser))
-	if orgsUser != nil {
 		for _, ou := range orgsUser {
 			org, err := uc.orgRepo.GetByID(ctx, ou.OrganizationID)
 			if err != nil {
-				uc.logger.Error(ctx, "failed to fetch organization",
+				uc.logger.Error(ctx, "failed to query organization",
 					"action", "LOGIN",
 					"organization_id", ou.OrganizationID,
 					"error", err.Error(),
 				)
-				return nil, newAuthError("server_error", "failed to fetch organization")
+				return nil, newAuthError("server_error", "failed to query organization")
 			}
 
 			orgSet = append(orgSet, org)
 		}
 		return &LoginResult{
-			User:              u,
-			Organizations:     orgSet,
-			AuthorizationCode: nil,
-			ExpiresAt:         nil,
-			Session:           sess,
+			User:          u,
+			Organizations: orgSet,
+			ChallengeID:   sess.CodeChallenge,
+			NextStep:      CONSENT,
 		}, nil
 
 	}
@@ -189,12 +199,12 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 
 	// roles, err := uc.userRoleRepo.ListRolesByUser(ctx, u.ID, params.OrgID)
 	// if err != nil {
-	// 	uc.logger.Error(ctx, "failed to fetch roles",
+	// 	uc.logger.Error(ctx, "failed to query roles",
 	// 		"action", "LOGIN",
 	// 		"user_id", u.ID,
 	// 		"error", err.Error(),
 	// 	)
-	// 	return nil, newAuthError("server_error", "failed to fetch user roles")
+	// 	return nil, newAuthError("server_error", "failed to query user roles")
 	// }
 
 	// roleSlugs := make([]string, 0, len(roles))
@@ -263,12 +273,14 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 
 	// // TODO: Store refresh token hash via oauthrefreshtoken repository
 	exp := code.ExpiresAt.Unix()
+	redirectURL := fmt.Sprintf("%s?code=%s&state=%s", sess.RedirectURI, sess.CodeChallenge, sess.State)
 	return &LoginResult{
 		User:              u,
-		Organizations:     orgSet,
 		AuthorizationCode: &code.CodeHash,
 		ExpiresAt:         &exp,
-		Session:           sess,
+		ChallengeID:       sess.CodeChallenge,
+		NextStep:          REDIRECT,
+		RedirectURL:       &redirectURL,
 	}, nil
 }
 
@@ -305,6 +317,8 @@ func (uc *loginUsecase) generateAuthorizationCode(
 			"error", err.Error())
 		return nil, newAuthError("server_error", "failed to persist oauth authorize code")
 	}
+
+	_ = uc.sessionRepo.Delete(ctx, sess.CodeChallenge)
 
 	// // 5. Redirect
 	// redirectURL := fmt.Sprintf("%s?code=%s&state=%s", params.RedirectURI, code, params.State)

@@ -10,17 +10,19 @@ import (
 	"github.com/zencodecode/authorizer-service/pkg/validation"
 )
 
-type LoginRequest struct {
-	Email       string `json:"email" validate:"required"`
-	Password    string `json:"password" validate:"required"`
-	ChallengeID string `form:"login_challenge"`
-}
+type (
+	LoginRequest struct {
+		Email       string `json:"email" validate:"required"`
+		Password    string `json:"password" validate:"required"`
+		ChallengeID string `form:"login_challenge"`
+	}
 
-type LoginResponse struct {
-	User              serializer.User `json:"user"`
-	AuthorizationCode *string         `json:"authorization_code"`
-	ExpiresAt         *int64          `json:"expires_at"`
-}
+	LoginResponse struct {
+		User          serializer.User           `json:"user"`
+		Organizations []serializer.Organization `json:"organizations"`
+		ChallengeID   string                    `form:"login_challenge"`
+	}
+)
 
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
@@ -51,18 +53,22 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	r := LoginResponse{
-		User:              serializer.SerializeToUser(*output.User),
-		AuthorizationCode: output.AuthorizationCode,
-		ExpiresAt:         output.ExpiresAt,
-	}
+	if output.NextStep == auth.CONSENT {
+		organizations := make([]serializer.Organization, 0, len(output.Organizations))
+		for _, org := range output.Organizations {
+			organizations = append(organizations, serializer.SerializeToOrganization(*org))
+		}
 
-	if output.AuthorizationCode != nil {
-		response.Success(c, "login success", r)
+		r := LoginResponse{
+			User:          serializer.SerializeToUser(*output.User),
+			Organizations: organizations,
+			ChallengeID:   output.ChallengeID,
+		}
+
+		response.Success(c, "proceed to consent", r)
 		return
 	}
-
-	c.Redirect(http.StatusFound, "/consent?login_challenge="+output.Session.CodeChallenge)
+	c.Redirect(http.StatusFound, *output.RedirectURL)
 }
 
 func toLoginParams(r LoginRequest) auth.LoginParams {

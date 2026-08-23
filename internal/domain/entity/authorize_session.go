@@ -1,5 +1,7 @@
 package entity
 
+import "github.com/google/uuid"
+
 type AuthorizeSession struct {
 	ClientID            string
 	RedirectURI         string
@@ -7,4 +9,5 @@ type AuthorizeSession struct {
 	State               string
 	CodeChallenge       string
 	CodeChallengeMethod string
+	UserID              *uuid.UUID
 }
