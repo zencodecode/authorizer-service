@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/application"
+	"github.com/zencodecode/authorizer-service/internal/domain/repository/auditlog"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/authorizesession"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/oauthauthorizationcode"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/organization"
@@ -28,7 +29,8 @@ type (
 		User              *entity.User
 		Organizations     []*entity.Organization
 		AuthorizationCode *string
-		ExpiresIn         *int
+		ExpiresAt         *int64
+		Session           *entity.AuthorizeSession
 	}
 )
 
@@ -39,6 +41,7 @@ type loginUsecase struct {
 	orgUserRepo   organizationuser.Repository
 	orgRepo       organization.Repository
 	oauthCodeRepo oauthauthorizationcode.Repository
+	auditLogRepo  auditlog.Repository
 	// userRoleRepo     userrole.Repository
 	// rolePermRepo     rolepermission.Repository
 	// refreshTokenRepo oauthrefreshtoken.Repository
@@ -53,6 +56,7 @@ func NewLoginUsecase(
 	orgUserRepo organizationuser.Repository,
 	orgRepo organization.Repository,
 	oauthCodeRepo oauthauthorizationcode.Repository,
+	auditLogRepo auditlog.Repository,
 	// userRoleRepo userrole.Repository,
 	// rolePermRepo rolepermission.Repository,
 	// refreshTokenRepo oauthrefreshtoken.Repository,
@@ -66,6 +70,7 @@ func NewLoginUsecase(
 		orgUserRepo:   orgUserRepo,
 		orgRepo:       orgRepo,
 		oauthCodeRepo: oauthCodeRepo,
+		auditLogRepo:  auditLogRepo,
 		// userRoleRepo:     userRoleRepo,
 		// rolePermRepo:     rolePermRepo,
 		// refreshTokenRepo: refreshTokenRepo,
@@ -105,7 +110,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 		return nil, ErrAccountSuspended
 	}
 
-	if u.EmailVerifiedAt != nil {
+	if u.EmailVerifiedAt == nil {
 		uc.logger.Warn(ctx, "login attempt on unverified account",
 			"action", "LOGIN",
 			"user_id", u.ID,
@@ -150,11 +155,11 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 	orgSet := make([]*entity.Organization, 0, len(orgsUser))
 	if orgsUser != nil {
 		for _, ou := range orgsUser {
-			org, err := uc.orgRepo.GetByID(ctx, ou.ID)
+			org, err := uc.orgRepo.GetByID(ctx, ou.OrganizationID)
 			if err != nil {
 				uc.logger.Error(ctx, "failed to fetch organization",
 					"action", "LOGIN",
-					"organization_id", ou.ID,
+					"organization_id", ou.OrganizationID,
 					"error", err.Error(),
 				)
 				return nil, newAuthError("server_error", "failed to fetch organization")
@@ -166,12 +171,21 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 			User:              u,
 			Organizations:     orgSet,
 			AuthorizationCode: nil,
-			ExpiresIn:         nil,
+			ExpiresAt:         nil,
+			Session:           sess,
 		}, nil
 
 	}
 
-	// code, err := uc.generateAuthorizationCode(ctx, sess, u.ID)
+	code, err := uc.generateAuthorizationCode(ctx, sess, u.ID, app.ID, &uuid.Nil)
+	if err != nil {
+		uc.logger.Error(ctx, "failed to generate authorization code",
+			"action", "LOGIN",
+			"user_id", u.ID,
+			"error", err.Error(),
+		)
+		return nil, newAuthError("server_error", "failed to generate authorization code")
+	}
 
 	// roles, err := uc.userRoleRepo.ListRolesByUser(ctx, u.ID, params.OrgID)
 	// if err != nil {
@@ -248,14 +262,14 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 	// }
 
 	// // TODO: Store refresh token hash via oauthrefreshtoken repository
-
-	// return &LoginResult{
-	// 	User:         u,
-	// 	AccessToken:  accessToken,
-	// 	RefreshToken: refreshToken,
-	// 	ExpiresIn:    int(expiresIn.Seconds()),
-	// }, nil
-	return nil, nil
+	exp := code.ExpiresAt.Unix()
+	return &LoginResult{
+		User:              u,
+		Organizations:     orgSet,
+		AuthorizationCode: &code.CodeHash,
+		ExpiresAt:         &exp,
+		Session:           sess,
+	}, nil
 }
 
 func (uc *loginUsecase) generateAuthorizationCode(
@@ -264,7 +278,7 @@ func (uc *loginUsecase) generateAuthorizationCode(
 	userID uuid.UUID,
 	appID uuid.UUID,
 	orgID *uuid.UUID,
-) (*string, error) {
+) (*entity.OAuthAuthorizationCode, error) {
 	code, err := randutil.GenerateRandomString(32)
 	if err != nil {
 		return nil, newAuthError("server_error", "failed to generate codebytes")
@@ -295,5 +309,5 @@ func (uc *loginUsecase) generateAuthorizationCode(
 	// // 5. Redirect
 	// redirectURL := fmt.Sprintf("%s?code=%s&state=%s", params.RedirectURI, code, params.State)
 	// // return redirect
-	return &codeHash, nil
+	return authCode, nil
 }

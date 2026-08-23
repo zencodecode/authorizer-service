@@ -8,17 +8,20 @@ import (
 
 type Handler struct {
 	authorizeUC auth.AuthorizeUsecase
+	loginUC     auth.LoginUsecase
 	cfg         *config.Config
 	logger      service.Logger
 }
 
 func New(
 	authorizeUC auth.AuthorizeUsecase,
+	loginUC auth.LoginUsecase,
 	cfg *config.Config,
 	logger service.Logger,
 ) *Handler {
 	return &Handler{
 		authorizeUC: authorizeUC,
+		loginUC:     loginUC,
 		cfg:         cfg,
 		logger:      logger,
 	}
