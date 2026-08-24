@@ -313,7 +313,7 @@ func (uc *loginUsecase) generateAuthorizationCode(
 
 	if err := uc.oauthCodeRepo.Create(ctx, authCode); err != nil {
 		uc.logger.Error(ctx, "failed to save authorize session",
-			"action", "AUTHORIZE",
+			"action", "LOGIN",
 			"error", err.Error())
 		return nil, newAuthError("server_error", "failed to persist oauth authorize code")
 	}
