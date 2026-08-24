@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
@@ -15,8 +14,6 @@ import (
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/organizationuser"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/user"
 	"github.com/zencodecode/authorizer-service/internal/domain/service"
-	"github.com/zencodecode/authorizer-service/pkg/hash"
-	"github.com/zencodecode/authorizer-service/pkg/randutil"
 )
 
 type (
@@ -24,13 +21,11 @@ type (
 		OrgID       uuid.UUID
 		ChallengeID string
 	}
+
 	ConsentResult struct {
-		User              *entity.User
-		Organizations     []*entity.Organization
-		ChallengeID       string
-		AuthorizationCode *string
-		ExpiresAt         *int64
-		RedirectURL       *string
+		User        *entity.User
+		ChallengeID string
+		RedirectURL *string
 	}
 )
 
@@ -42,6 +37,7 @@ type consentUsecase struct {
 	appRepo       application.Repository
 	oauthCodeRepo oauthauthorizationcode.Repository
 	sessionRepo   authorizesession.Repository
+	authCodeSvc   service.AuthorizationCode
 	logger        service.Logger
 }
 
@@ -53,6 +49,7 @@ func NewConsentUsecase(
 	appRepo application.Repository,
 	oauthCodeRepo oauthauthorizationcode.Repository,
 	sessionRepo authorizesession.Repository,
+	authCodeSvc service.AuthorizationCode,
 	logger service.Logger,
 ) ConsentUsecase {
 	return &consentUsecase{
@@ -63,6 +60,7 @@ func NewConsentUsecase(
 		appRepo:       appRepo,
 		oauthCodeRepo: oauthCodeRepo,
 		sessionRepo:   sessionRepo,
+		authCodeSvc:   authCodeSvc,
 		logger:        logger,
 	}
 }
@@ -134,7 +132,15 @@ func (uc *consentUsecase) Execute(ctx context.Context, params ConsentParams) (*C
 		return nil, newAuthError("server_error", "failed to query organization")
 	}
 
-	code, err := uc.generateAuthorizationCode(ctx, sess, u.ID, app.ID, &org.ID)
+	p := service.IssueAuthorizationCodeParams{
+		Session:     sess,
+		ChallengeID: params.ChallengeID,
+		UserID:      u.ID,
+		AppID:       app.ID,
+		OrgID:       &org.ID,
+	}
+
+	issued, err := uc.authCodeSvc.Issue(ctx, p)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to generate authorization code",
 			"action", "LOGIN",
@@ -144,52 +150,10 @@ func (uc *consentUsecase) Execute(ctx context.Context, params ConsentParams) (*C
 		return nil, newAuthError("server_error", "failed to generate authorization code")
 	}
 
-	exp := code.ExpiresAt.Unix()
-	redirectURL := fmt.Sprintf("%s?code=%s&state=%s", sess.RedirectURI, sess.CodeChallenge, sess.State)
+	redirectURL := fmt.Sprintf("%s?code=%s&state=%s", sess.RedirectURI, issued.Code, sess.State)
 	return &ConsentResult{
-		User:              u,
-		AuthorizationCode: &code.CodeHash,
-		ExpiresAt:         &exp,
-		ChallengeID:       sess.CodeChallenge,
-		RedirectURL:       &redirectURL,
+		User:        u,
+		ChallengeID: sess.CodeChallenge,
+		RedirectURL: &redirectURL,
 	}, nil
-}
-
-func (uc *consentUsecase) generateAuthorizationCode(
-	ctx context.Context,
-	sess *entity.AuthorizeSession,
-	userID uuid.UUID,
-	appID uuid.UUID,
-	orgID *uuid.UUID,
-) (*entity.OAuthAuthorizationCode, error) {
-	code, err := randutil.GenerateRandomString(32)
-	if err != nil {
-		return nil, newAuthError("server_error", "failed to generate codebytes")
-	}
-
-	codeHash := hash.HashSHA256(code)
-
-	authCode := &entity.OAuthAuthorizationCode{
-		ID:                  uuid.Must(uuid.NewV7()),
-		CodeHash:            codeHash,
-		UserID:              userID,
-		OrganizationID:      orgID,
-		ApplicationID:       appID,
-		RedirectURI:         sess.RedirectURI,
-		CodeChallenge:       sess.CodeChallenge,
-		CodeChallengeMethod: "S256",
-		Scopes:              sess.Scope,
-		ExpiresAt:           time.Now().Add(60 * time.Second),
-	}
-
-	if err := uc.oauthCodeRepo.Create(ctx, authCode); err != nil {
-		uc.logger.Error(ctx, "failed to save authorize session",
-			"action", "CONSENT",
-			"error", err.Error())
-		return nil, newAuthError("server_error", "failed to persist oauth authorize code")
-	}
-
-	_ = uc.sessionRepo.Delete(ctx, sess.CodeChallenge)
-
-	return authCode, nil
 }

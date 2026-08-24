@@ -1,8 +1,9 @@
 package auth
 
 import (
+	"net/http"
+
 	"github.com/google/uuid"
-	"github.com/k0kubun/pp"
 
 	"github.com/gin-gonic/gin"
 	"github.com/zencodecode/authorizer-service/internal/usecase/auth"
@@ -46,7 +47,7 @@ func (h *Handler) Consent(c *gin.Context) {
 		return
 	}
 
-	pp.Println(output)
+	c.Redirect(http.StatusFound, *output.RedirectURL)
 }
 
 func toConsentParams(r ConsentRequest) auth.ConsentParams {

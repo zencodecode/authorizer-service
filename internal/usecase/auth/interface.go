@@ -15,4 +15,8 @@ type (
 	ConsentUsecase interface {
 		Execute(ctx context.Context, params ConsentParams) (*ConsentResult, error)
 	}
+
+	TokenUsecase interface {
+		Execute(ctx context.Context, params TokenParams) (*TokenResult, error)
+	}
 )

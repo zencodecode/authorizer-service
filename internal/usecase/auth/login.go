@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/application"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/auditlog"
@@ -16,7 +15,6 @@ import (
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/user"
 	"github.com/zencodecode/authorizer-service/internal/domain/service"
 	"github.com/zencodecode/authorizer-service/pkg/hash"
-	"github.com/zencodecode/authorizer-service/pkg/randutil"
 )
 
 type NextAction string
@@ -32,13 +30,11 @@ type (
 	}
 
 	LoginResult struct {
-		User              *entity.User
-		Organizations     []*entity.Organization
-		ChallengeID       string
-		AuthorizationCode *string
-		ExpiresAt         *int64
-		NextStep          NextAction
-		RedirectURL       *string
+		User          *entity.User
+		Organizations []*entity.Organization
+		ChallengeID   string
+		RedirectURL   *string
+		NextStep      NextAction
 	}
 )
 
@@ -50,11 +46,8 @@ type loginUsecase struct {
 	orgRepo       organization.Repository
 	oauthCodeRepo oauthauthorizationcode.Repository
 	auditLogRepo  auditlog.Repository
-	// userRoleRepo     userrole.Repository
-	// rolePermRepo     rolepermission.Repository
-	// refreshTokenRepo oauthrefreshtoken.Repository
-	// jwtService       service.JWTService
-	logger service.Logger
+	authCodeSvc   service.AuthorizationCode
+	logger        service.Logger
 }
 
 func NewLoginUsecase(
@@ -65,10 +58,7 @@ func NewLoginUsecase(
 	orgRepo organization.Repository,
 	oauthCodeRepo oauthauthorizationcode.Repository,
 	auditLogRepo auditlog.Repository,
-	// userRoleRepo userrole.Repository,
-	// rolePermRepo rolepermission.Repository,
-	// refreshTokenRepo oauthrefreshtoken.Repository,
-	// jwtService service.JWTService,
+	authCodeSvc service.AuthorizationCode,
 	logger service.Logger,
 ) LoginUsecase {
 	return &loginUsecase{
@@ -79,11 +69,8 @@ func NewLoginUsecase(
 		orgRepo:       orgRepo,
 		oauthCodeRepo: oauthCodeRepo,
 		auditLogRepo:  auditLogRepo,
-		// userRoleRepo:     userRoleRepo,
-		// rolePermRepo:     rolePermRepo,
-		// refreshTokenRepo: refreshTokenRepo,
-		// jwtService:       jwtService,
-		logger: logger,
+		authCodeSvc:   authCodeSvc,
+		logger:        logger,
 	}
 }
 
@@ -181,13 +168,21 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 		return &LoginResult{
 			User:          u,
 			Organizations: orgSet,
-			ChallengeID:   sess.CodeChallenge,
+			ChallengeID:   params.ChallengeID,
 			NextStep:      CONSENT,
 		}, nil
 
 	}
 
-	code, err := uc.generateAuthorizationCode(ctx, sess, u.ID, app.ID, &uuid.Nil)
+	p := service.IssueAuthorizationCodeParams{
+		Session:     sess,
+		ChallengeID: params.ChallengeID,
+		UserID:      u.ID,
+		AppID:       app.ID,
+		OrgID:       nil,
+	}
+
+	issued, err := uc.authCodeSvc.Issue(ctx, p)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to generate authorization code",
 			"action", "LOGIN",
@@ -197,131 +192,11 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 		return nil, newAuthError("server_error", "failed to generate authorization code")
 	}
 
-	// roles, err := uc.userRoleRepo.ListRolesByUser(ctx, u.ID, params.OrgID)
-	// if err != nil {
-	// 	uc.logger.Error(ctx, "failed to query roles",
-	// 		"action", "LOGIN",
-	// 		"user_id", u.ID,
-	// 		"error", err.Error(),
-	// 	)
-	// 	return nil, newAuthError("server_error", "failed to query user roles")
-	// }
-
-	// roleSlugs := make([]string, 0, len(roles))
-	// permSet := make(map[string]struct{})
-
-	// for _, r := range roles {
-	// 	if r.ApplicationID != params.ApplicationID {
-	// 		continue
-	// 	}
-	// 	roleSlugs = append(roleSlugs, r.Slug)
-
-	// 	perms, _ := uc.rolePermRepo.ListPermissionsByRole(ctx, r.ID)
-	// 	for _, p := range perms {
-	// 		permSet[p.Slug] = struct{}{}
-	// 	}
-	// }
-
-	// permSlugs := make([]string, 0, len(permSet))
-	// for k := range permSet {
-	// 	permSlugs = append(permSlugs, k)
-	// }
-
-	// now := time.Now()
-	// expiresIn := 15 * time.Minute
-
-	// claims := &entity.Claims{
-	// 	RegisteredClaims: jwt.RegisteredClaims{
-	// 		Issuer:    "authorizer-service",
-	// 		Subject:   u.ID.String(),
-	// 		Audience:  jwt.ClaimStrings{params.ApplicationID.String()},
-	// 		ExpiresAt: jwt.NewNumericDate(now.Add(expiresIn)),
-	// 		IssuedAt:  jwt.NewNumericDate(now),
-	// 		ID:        uuid.Must(uuid.NewV7()).String(),
-	// 	},
-	// 	Name:        u.Name,
-	// 	Email:       u.Email,
-	// 	Scopes:      []string{"openid", "profile", "email"},
-	// 	Roles:       roleSlugs,
-	// 	Permissions: permSlugs,
-	// }
-
-	// if params.OrgID != nil {
-	// 	orgIDStr := params.OrgID.String()
-	// 	claims.OrgID = &orgIDStr
-	// }
-
-	// accessToken, err := uc.jwtService.GenerateAccessToken(ctx, claims)
-	// if err != nil {
-	// 	uc.logger.Error(ctx, "failed to generate access token",
-	// 		"action", "LOGIN",
-	// 		"user_id", u.ID,
-	// 		"error", err.Error(),
-	// 	)
-	// 	return nil, newAuthError("server_error", "failed to generate access token")
-	// }
-
-	// refreshToken, err := uc.jwtService.GenerateRefreshToken()
-	// if err != nil {
-	// 	uc.logger.Error(ctx, "failed to generate refresh token",
-	// 		"action", "LOGIN",
-	// 		"user_id", u.ID,
-	// 		"error", err.Error(),
-	// 	)
-	// 	return nil, newAuthError("server_error", "failed to generate refresh token")
-	// }
-
-	// // TODO: Store refresh token hash via oauthrefreshtoken repository
-	exp := code.ExpiresAt.Unix()
-	redirectURL := fmt.Sprintf("%s?code=%s&state=%s", sess.RedirectURI, sess.CodeChallenge, sess.State)
+	redirectURL := fmt.Sprintf("%s?code=%s&state=%s", sess.RedirectURI, issued.Code, sess.State)
 	return &LoginResult{
-		User:              u,
-		AuthorizationCode: &code.CodeHash,
-		ExpiresAt:         &exp,
-		ChallengeID:       sess.CodeChallenge,
-		NextStep:          REDIRECT,
-		RedirectURL:       &redirectURL,
+		User:        u,
+		ChallengeID: params.ChallengeID,
+		RedirectURL: &redirectURL,
+		NextStep:    REDIRECT,
 	}, nil
-}
-
-func (uc *loginUsecase) generateAuthorizationCode(
-	ctx context.Context,
-	sess *entity.AuthorizeSession,
-	userID uuid.UUID,
-	appID uuid.UUID,
-	orgID *uuid.UUID,
-) (*entity.OAuthAuthorizationCode, error) {
-	code, err := randutil.GenerateRandomString(32)
-	if err != nil {
-		return nil, newAuthError("server_error", "failed to generate codebytes")
-	}
-
-	codeHash := hash.HashSHA256(code)
-
-	authCode := &entity.OAuthAuthorizationCode{
-		ID:                  uuid.Must(uuid.NewV7()),
-		CodeHash:            codeHash,
-		UserID:              userID,
-		OrganizationID:      orgID,
-		ApplicationID:       appID,
-		RedirectURI:         sess.RedirectURI,
-		CodeChallenge:       sess.CodeChallenge,
-		CodeChallengeMethod: "S256",
-		Scopes:              sess.Scope,
-		ExpiresAt:           time.Now().Add(60 * time.Second),
-	}
-
-	if err := uc.oauthCodeRepo.Create(ctx, authCode); err != nil {
-		uc.logger.Error(ctx, "failed to save authorize session",
-			"action", "LOGIN",
-			"error", err.Error())
-		return nil, newAuthError("server_error", "failed to persist oauth authorize code")
-	}
-
-	_ = uc.sessionRepo.Delete(ctx, sess.CodeChallenge)
-
-	// // 5. Redirect
-	// redirectURL := fmt.Sprintf("%s?code=%s&state=%s", params.RedirectURI, code, params.State)
-	// // return redirect
-	return authCode, nil
 }
