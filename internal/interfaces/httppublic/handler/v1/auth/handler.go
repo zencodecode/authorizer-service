@@ -10,6 +10,7 @@ type Handler struct {
 	authorizeUC auth.AuthorizeUsecase
 	loginUC     auth.LoginUsecase
 	consentUC   auth.ConsentUsecase
+	tokenUC     auth.TokenUsecase
 	cfg         *config.Config
 	logger      service.Logger
 }
@@ -18,6 +19,7 @@ func New(
 	authorizeUC auth.AuthorizeUsecase,
 	loginUC auth.LoginUsecase,
 	consentUC auth.ConsentUsecase,
+	tokenUC auth.TokenUsecase,
 	cfg *config.Config,
 	logger service.Logger,
 ) *Handler {
@@ -25,6 +27,7 @@ func New(
 		authorizeUC: authorizeUC,
 		loginUC:     loginUC,
 		consentUC:   consentUC,
+		tokenUC:     tokenUC,
 		cfg:         cfg,
 		logger:      logger,
 	}

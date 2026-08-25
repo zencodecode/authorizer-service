@@ -15,10 +15,10 @@ type AuthorizeRequest struct {
 	ResponseType        string `form:"response_type" binding:"required"`
 	ClientID            string `form:"client_id" binding:"required"`
 	RedirectURI         string `form:"redirect_uri" binding:"required"`
-	Scope               string `form:"scope"`
-	State               string `form:"state"`
-	CodeChallenge       string `form:"code_challenge"`
-	CodeChallengeMethod string `form:"code_challenge_method"`
+	Scope               string `form:"scope" binding:"required"`
+	State               string `form:"state" binding:"required"`
+	CodeChallenge       string `form:"code_challenge" binding:"required"`
+	CodeChallengeMethod string `form:"code_challenge_method" binding:"required"`
 }
 
 func (h *Handler) Authorize(c *gin.Context) {
@@ -43,11 +43,9 @@ func (h *Handler) handleAuthorizeError(c *gin.Context, params auth.AuthorizePara
 	var authErr *auth.AuthError
 
 	switch {
-	// Redirect-safe errors: redirect back to client with error params
 	case errors.As(err, &authErr):
 		redirectWithError(c, params.RedirectURI, params.State, authErr.Code, authErr.Description)
 
-	// Non-redirect errors: show error page directly (NEVER redirect to unvalidated URI)
 	case errors.Is(err, auth.ErrInvalidClient):
 		renderErrorPage(c, http.StatusBadRequest, "Invalid client application")
 
