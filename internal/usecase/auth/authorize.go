@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zencodecode/authorizer-service/internal/definition/enum"
+	"github.com/zencodecode/authorizer-service/internal/domain/apperr"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/application"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/applicationscope"
@@ -61,10 +63,6 @@ func NewAuthorizeUsecase(
 }
 
 func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams) (*AuthorizeResult, error) {
-	if params.ResponseType != "code" {
-		return nil, newAuthError("unsupported_response_type", "only 'code' response_type is supported")
-	}
-
 	app, err := uc.appRepo.GetByClientID(ctx, params.ClientID)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to query application",
@@ -72,7 +70,7 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 			"client_id", params.ClientID,
 			"error", err.Error(),
 		)
-		return nil, ErrInvalidClient
+		return nil, apperr.NewFatalError(enum.INVALID_CLIENT, "client_id not found")
 	}
 
 	if !isRedirectURIAllowed(app.RedirectURIs, params.RedirectURI) {
@@ -81,18 +79,26 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 			"client_id", params.ClientID,
 			"redirect_uri", params.RedirectURI,
 		)
-		return nil, ErrRedirectURINotRegistered
+		return nil, apperr.NewFatalError(enum.INVALID_CLIENT, "redirect_uri not registered for this client")
+	}
+
+	if params.ResponseType != "code" {
+		return nil, apperr.NewRedirectableError(enum.UNSUPPORTED_RESPONSE_TYPE,
+			"only 'code' response_type is supported", params.RedirectURI, params.State)
 	}
 
 	if params.CodeChallengeMethod != "S256" {
-		return nil, newAuthError("invalid_request", "code_challenge_method must be S256")
+		return nil, apperr.NewRedirectableError(enum.INVALID_REQUEST,
+			"code_challenge_method must be S256", params.RedirectURI, params.State)
 	}
 	if len(params.CodeChallenge) < 43 {
-		return nil, newAuthError("invalid_request", "code_challenge is required and must be at least 43 characters")
+		return nil, apperr.NewRedirectableError(enum.INVALID_REQUEST,
+			"code_challenge is required and must be at least 43 characters", params.RedirectURI, params.State)
 	}
 
 	if len(params.Scope) == 0 {
-		return nil, newAuthError("invalid_scope", "at least one scope is required")
+		return nil, apperr.NewRedirectableError(enum.INVALID_SCOPE,
+			"at least one scope is required", params.RedirectURI, params.State)
 	}
 	for _, scope := range params.Scope {
 		s, err := uc.scopeRepo.GetByApplicationAndScope(ctx, app.ID, scope)
@@ -102,10 +108,12 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 				"scope", scope,
 				"error", err.Error(),
 			)
-			return nil, newAuthError("server_error", "failed to validate scopes")
+			return nil, apperr.NewRedirectableError(enum.INVALID_SCOPE,
+				fmt.Sprintf("scope %q is not registered", scope), params.RedirectURI, params.State)
 		}
 		if s == nil {
-			return nil, newAuthError("invalid_scope", fmt.Sprintf("scope %q is not registered for this application", scope))
+			return nil, apperr.NewRedirectableError(enum.INVALID_SCOPE,
+				fmt.Sprintf("scope %q is not registered", scope), params.RedirectURI, params.State)
 		}
 	}
 
@@ -115,7 +123,7 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 			"action", "AUTHORIZE",
 			"client_id", params.ClientID,
 			"error", err.Error())
-		return nil, newAuthError("server_error", "failed to generate challenge id")
+		return nil, apperr.NewFatalError(enum.SERVER_ERROR, "failed to generate challenge id")
 	}
 
 	sess := entity.AuthorizeSession{
@@ -132,7 +140,7 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 			"action", "AUTHORIZE",
 			"client_id", params.ClientID,
 			"error", err.Error())
-		return nil, newAuthError("server_error", "failed to persist authorize request")
+		return nil, apperr.NewFatalError(enum.SERVER_ERROR, "failed to persist authorize request")
 	}
 
 	return &AuthorizeResult{

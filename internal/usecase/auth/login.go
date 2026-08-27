@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/zencodecode/authorizer-service/internal/definition/enum"
+	"github.com/zencodecode/authorizer-service/internal/domain/apperr"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/application"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/auditlog"
@@ -75,44 +77,6 @@ func NewLoginUsecase(
 }
 
 func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*LoginResult, error) {
-	u, err := uc.userRepo.GetByEmail(ctx, params.Email)
-	if err != nil {
-		uc.logger.Warn(ctx, "failed to query user by email",
-			"action", "LOGIN",
-			"email", params.Email,
-			"error", err.Error(),
-		)
-		return nil, ErrInvalidCredentials
-	}
-	if u == nil {
-		return nil, ErrInvalidCredentials
-	}
-
-	if !hash.CheckHash(u.PasswordHash, params.Password) {
-		uc.logger.Warn(ctx, "invalid password",
-			"action", "LOGIN",
-			"user_id", u.ID,
-		)
-		return nil, ErrInvalidCredentials
-	}
-
-	if u.Status != "active" {
-		uc.logger.Warn(ctx, "login attempt on inactive account",
-			"action", "LOGIN",
-			"user_id", u.ID,
-			"status", u.Status,
-		)
-		return nil, ErrAccountSuspended
-	}
-
-	if u.EmailVerifiedAt == nil {
-		uc.logger.Warn(ctx, "login attempt on unverified account",
-			"action", "LOGIN",
-			"user_id", u.ID,
-			"status", u.Status,
-		)
-		return nil, ErrEmailNotVerified
-	}
 
 	sess, err := uc.sessionRepo.Get(ctx, params.ChallengeID)
 	if err != nil {
@@ -121,7 +85,45 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 			"challenge_id", params.ChallengeID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to query session params")
+		return nil, apperr.NewFatalError(enum.SERVER_ERROR, "failed to query session params")
+	}
+
+	u, err := uc.userRepo.GetByEmail(ctx, params.Email)
+	if err != nil {
+		uc.logger.Warn(ctx, "failed to query user by email",
+			"action", "LOGIN",
+			"email", params.Email,
+			"error", err.Error(),
+		)
+		return nil, apperr.NewRedirectableError(enum.INVALID_GRANT,
+			"email or password is invalid", sess.RedirectURI, sess.State)
+	}
+
+	if !hash.CheckHash(u.PasswordHash, params.Password) {
+		uc.logger.Warn(ctx, "invalid password",
+			"action", "LOGIN",
+			"user_id", u.ID,
+		)
+		return nil, apperr.NewRedirectableError(enum.INVALID_GRANT,
+			"email or password is invalid", sess.RedirectURI, sess.State)
+	}
+
+	if u.Status != "active" {
+		uc.logger.Warn(ctx, "login attempt on inactive account",
+			"action", "LOGIN",
+			"user_id", u.ID,
+			"status", u.Status,
+		)
+		return nil, apperr.NewFatalError(enum.ACCESS_DENIED, "account is suspended")
+	}
+
+	if u.EmailVerifiedAt == nil {
+		uc.logger.Warn(ctx, "login attempt on unverified account",
+			"action", "LOGIN",
+			"user_id", u.ID,
+			"status", u.Status,
+		)
+		return nil, apperr.NewFatalError(enum.ACCESS_DENIED, "email is not verified")
 	}
 
 	app, err := uc.appRepo.GetByClientID(ctx, sess.ClientID)
@@ -131,12 +133,12 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 			"client_id", sess.ClientID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to query application")
+		return nil, apperr.NewFatalError(enum.SERVER_ERROR, "failed to query application")
 	}
 
 	sess.UserID = &u.ID
 	if err := uc.sessionRepo.Save(ctx, params.ChallengeID, *sess, 10*time.Minute); err != nil {
-		return nil, newAuthError("server_error", "failed to persist session")
+		return nil, apperr.NewFatalError(enum.SERVER_ERROR, "failed to persist session")
 	}
 
 	if app.RequiresOrganization {
@@ -148,7 +150,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 				"user_id", u.ID,
 				"error", err.Error(),
 			)
-			return nil, newAuthError("server_error", "failed to query organization user")
+			return nil, apperr.NewFatalError(enum.SERVER_ERROR, "failed to query organization user")
 		}
 		orgSet := make([]*entity.Organization, 0, len(orgsUser))
 
@@ -160,7 +162,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 					"organization_id", ou.OrganizationID,
 					"error", err.Error(),
 				)
-				return nil, newAuthError("server_error", "failed to query organization")
+				return nil, apperr.NewFatalError(enum.SERVER_ERROR, "failed to query organization")
 			}
 
 			orgSet = append(orgSet, org)
@@ -189,7 +191,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 			"user_id", u.ID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to generate authorization code")
+		return nil, apperr.NewFatalError(enum.SERVER_ERROR, "failed to generate authorization code")
 	}
 
 	redirectURL := fmt.Sprintf("%s?code=%s&state=%s", sess.RedirectURI, issued.Code, sess.State)

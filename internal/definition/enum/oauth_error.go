@@ -4,6 +4,8 @@ type OAuthError string
 
 const (
 	INVALID_REQUEST           OAuthError = "invalid_request"
+	INVALID_CLIENT            OAuthError = "invalid_client"
+	INVALID_GRANT             OAuthError = "invalid_grant"
 	UNAUTHORIZED_CLIENT       OAuthError = "unauthorized_client"
 	ACCESS_DENIED             OAuthError = "access_denied"
 	UNSUPPORTED_RESPONSE_TYPE OAuthError = "unsupported_response_type"
