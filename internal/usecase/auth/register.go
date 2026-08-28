@@ -2,10 +2,11 @@ package auth
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/zencodecode/authorizer-service/internal/definition/enum"
+	"github.com/zencodecode/authorizer-service/internal/domain/apperr"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/user"
 	"github.com/zencodecode/authorizer-service/internal/domain/service"
@@ -41,7 +42,7 @@ func NewRegisterUsecase(
 
 func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (*RegisterResult, error) {
 	if len(params.Password) < 8 {
-		return nil, errors.New("password must be at least 8 characters")
+		return nil, apperr.NewDirectError(enum.INVALID_REQUEST, "password must be at least 8 characters")
 	}
 
 	existingUser, _ := uc.userRepo.GetByEmail(ctx, params.Email)
@@ -50,7 +51,7 @@ func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (
 			"action", "REGISTER",
 			"email", params.Email,
 		)
-		return nil, errors.New("email already registered")
+		return nil, apperr.NewDirectError(enum.INVALID_REQUEST, "email already registered")
 	}
 
 	hashedPassword, err := hash.Hash(params.Password)
@@ -60,7 +61,7 @@ func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (
 			"email", params.Email,
 			"error", err.Error(),
 		)
-		return nil, errors.New("failed to process registration")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to process registration")
 	}
 
 	now := time.Now()
@@ -81,7 +82,7 @@ func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (
 			"email", params.Email,
 			"error", err.Error(),
 		)
-		return nil, errors.New("failed to create user")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to create user")
 	}
 
 	// TODO: Generate email verification token and send email

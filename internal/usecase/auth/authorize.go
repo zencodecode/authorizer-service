@@ -70,7 +70,7 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 			"client_id", params.ClientID,
 			"error", err.Error(),
 		)
-		return nil, apperr.NewFatalError(enum.INVALID_CLIENT, "client_id not found")
+		return nil, apperr.NewDirectError(enum.INVALID_CLIENT, "client_id not found")
 	}
 
 	if !isRedirectURIAllowed(app.RedirectURIs, params.RedirectURI) {
@@ -79,7 +79,7 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 			"client_id", params.ClientID,
 			"redirect_uri", params.RedirectURI,
 		)
-		return nil, apperr.NewFatalError(enum.INVALID_CLIENT, "redirect_uri not registered for this client")
+		return nil, apperr.NewDirectError(enum.INVALID_CLIENT, "redirect_uri not registered for this client")
 	}
 
 	if params.ResponseType != "code" {
@@ -123,7 +123,7 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 			"action", "AUTHORIZE",
 			"client_id", params.ClientID,
 			"error", err.Error())
-		return nil, apperr.NewFatalError(enum.SERVER_ERROR, "failed to generate challenge id")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to generate challenge id")
 	}
 
 	sess := entity.AuthorizeSession{
@@ -140,7 +140,7 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 			"action", "AUTHORIZE",
 			"client_id", params.ClientID,
 			"error", err.Error())
-		return nil, apperr.NewFatalError(enum.SERVER_ERROR, "failed to persist authorize request")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to persist authorize request")
 	}
 
 	return &AuthorizeResult{

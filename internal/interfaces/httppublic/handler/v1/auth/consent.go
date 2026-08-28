@@ -6,8 +6,9 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zencodecode/authorizer-service/internal/definition/enum"
+	"github.com/zencodecode/authorizer-service/internal/domain/apperr"
 	"github.com/zencodecode/authorizer-service/internal/usecase/auth"
-	"github.com/zencodecode/authorizer-service/pkg/response"
 	"github.com/zencodecode/authorizer-service/pkg/validation"
 )
 
@@ -21,12 +22,12 @@ type (
 func (h *Handler) Consent(c *gin.Context) {
 	var req ConsentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
+		_ = c.Error(apperr.NewDirectError(enum.INVALID_REQUEST, err.Error()))
 		return
 	}
 
 	if err := c.ShouldBindQuery(&req); err != nil {
-		response.BadRequest(c, err.Error())
+		_ = c.Error(apperr.NewDirectError(enum.INVALID_REQUEST, err.Error()))
 		return
 	}
 
@@ -35,7 +36,7 @@ func (h *Handler) Consent(c *gin.Context) {
 	}
 
 	if err := validator.Validate(c, req); err != nil {
-		response.BadRequest(c, err.Error())
+		_ = c.Error(apperr.NewDirectError(enum.INVALID_REQUEST, err.Error()))
 		return
 	}
 
@@ -43,7 +44,7 @@ func (h *Handler) Consent(c *gin.Context) {
 
 	output, err := h.consentUC.Execute(c.Request.Context(), params)
 	if err != nil {
-		response.InternalServerError(c, err.Error())
+		_ = c.Error(err)
 		return
 	}
 

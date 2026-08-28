@@ -6,6 +6,8 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/zencodecode/authorizer-service/internal/definition/enum"
+	"github.com/zencodecode/authorizer-service/internal/domain/apperr"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/application"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/oauthaccesstoken"
@@ -91,11 +93,11 @@ func (uc *tokenUsecase) Execute(ctx context.Context, params TokenParams) (*Token
 			"client_id", &params.ClientID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to query applicaton")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query application")
 	}
 
 	if !hash.CheckHash(app.ClientSecretHash, params.ClientSecret) {
-		return nil, newAuthError("bad_request", "client secret is invalid")
+		return nil, apperr.NewDirectError(enum.INVALID_CLIENT, "client secret is invalid")
 	}
 
 	codeHash := hash.HashSHA256(params.Code)
@@ -107,24 +109,24 @@ func (uc *tokenUsecase) Execute(ctx context.Context, params TokenParams) (*Token
 			"code_hash", codeHash,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to query oauth authorization code")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query oauth authorization code")
 	}
 
 	if !oauthcode.ExpiresAt.After(time.Now()) {
-		return nil, newAuthError("not_found", "oauth authorization code has been expired")
+		return nil, apperr.NewDirectError(enum.INVALID_GRANT, "authorization code has expired")
 	}
 
 	if oauthcode.UsedAt != nil {
-		return nil, newAuthError("not_found", "oauth authorization code has been used")
+		return nil, apperr.NewDirectError(enum.INVALID_GRANT, "authorization code has already been used")
 	}
 
 	if oauthcode.RedirectURI != params.RedirectURI {
-		return nil, newAuthError("bad_request", "redirect URI does not match")
+		return nil, apperr.NewDirectError(enum.INVALID_GRANT, "redirect_uri does not match")
 	}
 
 	computed := hash.HashSHA256(params.CodeVerifier)
 	if computed != oauthcode.CodeChallenge {
-		return nil, newAuthError("invalid_grant", "PKCE verification failed")
+		return nil, apperr.NewDirectError(enum.INVALID_GRANT, "PKCE verification failed")
 	}
 
 	if err := uc.oauthCodeRepo.MarkUsed(ctx, oauthcode.ID); err != nil {
@@ -133,7 +135,7 @@ func (uc *tokenUsecase) Execute(ctx context.Context, params TokenParams) (*Token
 			"code_id", oauthcode.ID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to update oauth_authorization_code used_at")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to update oauth_authorization_code used_at")
 	}
 
 	u, err := uc.userRepo.GetByID(ctx, oauthcode.UserID)
@@ -143,7 +145,7 @@ func (uc *tokenUsecase) Execute(ctx context.Context, params TokenParams) (*Token
 			"user_id", oauthcode.UserID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to query user")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query user")
 	}
 
 	org, err := uc.orgRepo.GetByID(ctx, *oauthcode.OrganizationID)
@@ -153,7 +155,7 @@ func (uc *tokenUsecase) Execute(ctx context.Context, params TokenParams) (*Token
 			"organization_id", oauthcode.OrganizationID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to query organization")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query organization")
 	}
 
 	roles, err := uc.userRoleRepo.ListRolesByUser(ctx, u.ID, &org.ID)
@@ -163,7 +165,7 @@ func (uc *tokenUsecase) Execute(ctx context.Context, params TokenParams) (*Token
 			"user_id", u.ID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to query user roles")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query user roles")
 	}
 
 	roleSlugs := make([]string, 0, len(roles))
@@ -212,7 +214,7 @@ func (uc *tokenUsecase) Execute(ctx context.Context, params TokenParams) (*Token
 			"user_id", u.ID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to generate access token")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to generate access token")
 	}
 
 	access := &entity.OAuthAccessToken{
@@ -230,7 +232,7 @@ func (uc *tokenUsecase) Execute(ctx context.Context, params TokenParams) (*Token
 			"action", "TOKEN",
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to persist access token")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to persist access token")
 	}
 
 	refreshToken, err := uc.jwtSvc.GenerateRefreshToken()
@@ -240,7 +242,7 @@ func (uc *tokenUsecase) Execute(ctx context.Context, params TokenParams) (*Token
 			"user_id", u.ID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to generate refresh token")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to generate refresh token")
 	}
 
 	refresh := &entity.OAuthRefreshToken{
@@ -255,7 +257,7 @@ func (uc *tokenUsecase) Execute(ctx context.Context, params TokenParams) (*Token
 			"action", "TOKEN",
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to persist refresh token")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to persist refresh token")
 	}
 
 	token := &TokenResult{

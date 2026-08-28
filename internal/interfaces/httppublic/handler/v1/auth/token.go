@@ -1,10 +1,12 @@
 package auth
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
-	"github.com/zencodecode/authorizer-service/internal/interfaces/httppublic/serializer"
+	"github.com/zencodecode/authorizer-service/internal/definition/enum"
+	"github.com/zencodecode/authorizer-service/internal/domain/apperr"
 	"github.com/zencodecode/authorizer-service/internal/usecase/auth"
-	"github.com/zencodecode/authorizer-service/pkg/response"
 	"github.com/zencodecode/authorizer-service/pkg/validation"
 )
 
@@ -18,17 +20,21 @@ type (
 		CodeVerifier string `form:"code_verifier" binding:"required"`
 	}
 
+	// TokenResponse follows RFC 6749 §5.1 — Successful Response
 	TokenResponse struct {
-		User         serializer.User `json:"user"`
-		AccessToken  string          `json:"access_token"`
-		RefreshToken string          `form:"refresh_token"`
+		AccessToken  string `json:"access_token"`
+		TokenType    string `json:"token_type"`
+		ExpiresIn    int    `json:"expires_in"`
+		RefreshToken string `json:"refresh_token,omitempty"`
+		Scope        string `json:"scope,omitempty"`
+		IDToken      string `json:"id_token,omitempty"`
 	}
 )
 
 func (h *Handler) Token(c *gin.Context) {
 	var req TokenRequest
-	if err := c.ShouldBindQuery(&req); err != nil {
-		response.BadRequest(c, err.Error())
+	if err := c.ShouldBind(&req); err != nil {
+		_ = c.Error(apperr.NewDirectError(enum.INVALID_REQUEST, err.Error()))
 		return
 	}
 
@@ -37,7 +43,7 @@ func (h *Handler) Token(c *gin.Context) {
 	}
 
 	if err := validator.Validate(c, req); err != nil {
-		response.BadRequest(c, err.Error())
+		_ = c.Error(apperr.NewDirectError(enum.INVALID_REQUEST, err.Error()))
 		return
 	}
 
@@ -45,18 +51,17 @@ func (h *Handler) Token(c *gin.Context) {
 
 	output, err := h.tokenUC.Execute(c.Request.Context(), params)
 	if err != nil {
-		response.InternalServerError(c, err.Error())
+		_ = c.Error(err)
 		return
 	}
 
-	r := TokenResponse{
-		User:         serializer.SerializeToUser(*output.User),
+	// RFC 6749 §5.1 — Successful Response
+	c.JSON(http.StatusOK, TokenResponse{
 		AccessToken:  output.AccessToken,
+		TokenType:    "Bearer",
+		ExpiresIn:    900, // 15 minutes
 		RefreshToken: output.RefreshToken,
-	}
-
-	response.Success(c, "proceed to consent", r)
-
+	})
 }
 
 func toTokenParams(r TokenRequest) auth.TokenParams {

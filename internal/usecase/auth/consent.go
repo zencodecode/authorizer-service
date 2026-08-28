@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/zencodecode/authorizer-service/internal/definition/enum"
+	"github.com/zencodecode/authorizer-service/internal/domain/apperr"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/application"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/authorizesession"
@@ -73,7 +75,7 @@ func (uc *consentUsecase) Execute(ctx context.Context, params ConsentParams) (*C
 			"challenge_id", params.ChallengeID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to query session params")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query session params")
 	}
 
 	u, err := uc.userRepo.GetByID(ctx, *sess.UserID)
@@ -83,7 +85,7 @@ func (uc *consentUsecase) Execute(ctx context.Context, params ConsentParams) (*C
 			"user_id", *sess.UserID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to query user")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query user")
 	}
 
 	orgUser, err := uc.orgUserRepo.GetByOrganizationAndUser(ctx, params.OrgID, u.ID)
@@ -94,7 +96,7 @@ func (uc *consentUsecase) Execute(ctx context.Context, params ConsentParams) (*C
 			"organization_id", params.OrgID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to query organization user")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query organization user")
 	}
 
 	app, err := uc.appRepo.GetByClientID(ctx, sess.ClientID)
@@ -104,7 +106,7 @@ func (uc *consentUsecase) Execute(ctx context.Context, params ConsentParams) (*C
 			"client_id", &sess.ClientID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to query applicaton")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query application")
 	}
 
 	orgApp, err := uc.orgAppRepo.GetByOrganizationAndApplication(ctx, orgUser.OrganizationID, app.ID)
@@ -115,11 +117,11 @@ func (uc *consentUsecase) Execute(ctx context.Context, params ConsentParams) (*C
 			"application_id", sess.ClientID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to query organization application")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query organization application")
 	}
 
 	if !orgApp.IsActive {
-		return nil, newAuthError("access_denied", "organization application is not active")
+		return nil, apperr.NewDirectError(enum.ACCESS_DENIED, "organization application is not active")
 	}
 
 	org, err := uc.orgRepo.GetByID(ctx, orgApp.OrganizationID)
@@ -129,7 +131,7 @@ func (uc *consentUsecase) Execute(ctx context.Context, params ConsentParams) (*C
 			"organization_id", params.OrgID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to query organization")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query organization")
 	}
 
 	p := service.IssueAuthorizationCodeParams{
@@ -147,7 +149,7 @@ func (uc *consentUsecase) Execute(ctx context.Context, params ConsentParams) (*C
 			"user_id", u.ID,
 			"error", err.Error(),
 		)
-		return nil, newAuthError("server_error", "failed to generate authorization code")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to generate authorization code")
 	}
 
 	redirectURL := fmt.Sprintf("%s?code=%s&state=%s", sess.RedirectURI, issued.Code, sess.State)

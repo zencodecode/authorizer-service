@@ -85,7 +85,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 			"challenge_id", params.ChallengeID,
 			"error", err.Error(),
 		)
-		return nil, apperr.NewFatalError(enum.SERVER_ERROR, "failed to query session params")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query session params")
 	}
 
 	u, err := uc.userRepo.GetByEmail(ctx, params.Email)
@@ -114,7 +114,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 			"user_id", u.ID,
 			"status", u.Status,
 		)
-		return nil, apperr.NewFatalError(enum.ACCESS_DENIED, "account is suspended")
+		return nil, apperr.NewDirectError(enum.ACCESS_DENIED, "account is suspended")
 	}
 
 	if u.EmailVerifiedAt == nil {
@@ -123,7 +123,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 			"user_id", u.ID,
 			"status", u.Status,
 		)
-		return nil, apperr.NewFatalError(enum.ACCESS_DENIED, "email is not verified")
+		return nil, apperr.NewDirectError(enum.ACCESS_DENIED, "email is not verified")
 	}
 
 	app, err := uc.appRepo.GetByClientID(ctx, sess.ClientID)
@@ -133,12 +133,12 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 			"client_id", sess.ClientID,
 			"error", err.Error(),
 		)
-		return nil, apperr.NewFatalError(enum.SERVER_ERROR, "failed to query application")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query application")
 	}
 
 	sess.UserID = &u.ID
 	if err := uc.sessionRepo.Save(ctx, params.ChallengeID, *sess, 10*time.Minute); err != nil {
-		return nil, apperr.NewFatalError(enum.SERVER_ERROR, "failed to persist session")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to persist session")
 	}
 
 	if app.RequiresOrganization {
@@ -150,7 +150,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 				"user_id", u.ID,
 				"error", err.Error(),
 			)
-			return nil, apperr.NewFatalError(enum.SERVER_ERROR, "failed to query organization user")
+			return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query organization user")
 		}
 		orgSet := make([]*entity.Organization, 0, len(orgsUser))
 
@@ -162,7 +162,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 					"organization_id", ou.OrganizationID,
 					"error", err.Error(),
 				)
-				return nil, apperr.NewFatalError(enum.SERVER_ERROR, "failed to query organization")
+				return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query organization")
 			}
 
 			orgSet = append(orgSet, org)
@@ -191,7 +191,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 			"user_id", u.ID,
 			"error", err.Error(),
 		)
-		return nil, apperr.NewFatalError(enum.SERVER_ERROR, "failed to generate authorization code")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to generate authorization code")
 	}
 
 	redirectURL := fmt.Sprintf("%s?code=%s&state=%s", sess.RedirectURI, issued.Code, sess.State)

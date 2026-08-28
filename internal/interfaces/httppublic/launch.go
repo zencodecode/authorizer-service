@@ -9,6 +9,7 @@ import (
 	"github.com/gin-contrib/secure"
 	"github.com/gin-gonic/gin"
 	"github.com/zencodecode/authorizer-service/internal/bootstrap"
+	"github.com/zencodecode/authorizer-service/internal/interfaces/httppublic/middleware"
 	"github.com/zencodecode/authorizer-service/pkg/response"
 )
 
@@ -32,6 +33,7 @@ func Launch(ctx context.Context, c *bootstrap.Container) error {
 		)
 		response.InternalServerError(gc, "internal server error")
 	}))
+	r.Use(middleware.OAuthErrorHandler())
 	// r.Use(middleware.RequestIDMiddleware())
 	// r.Use(middleware.AccessLoggerMiddleware(c.Logger))
 	r.Use(secure.New(secure.Config{

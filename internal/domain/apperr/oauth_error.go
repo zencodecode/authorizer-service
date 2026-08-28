@@ -21,6 +21,6 @@ func NewRedirectableError(code enum.OAuthError, description, redirectURI, state 
 	return &OAuthError{Code: code, Description: description, RedirectURI: redirectURI, State: state}
 }
 
-func NewFatalError(code enum.OAuthError, description string) *OAuthError {
+func NewDirectError(code enum.OAuthError, description string) *OAuthError {
 	return &OAuthError{Code: code, Description: description}
 }

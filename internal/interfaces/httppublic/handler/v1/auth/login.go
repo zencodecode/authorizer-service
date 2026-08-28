@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/zencodecode/authorizer-service/internal/definition/enum"
+	"github.com/zencodecode/authorizer-service/internal/domain/apperr"
 	"github.com/zencodecode/authorizer-service/internal/interfaces/httppublic/serializer"
 	"github.com/zencodecode/authorizer-service/internal/usecase/auth"
 	"github.com/zencodecode/authorizer-service/pkg/response"
@@ -20,19 +22,19 @@ type (
 	LoginResponse struct {
 		User          serializer.User           `json:"user"`
 		Organizations []serializer.Organization `json:"organizations"`
-		ChallengeID   string                    `form:"login_challenge"`
+		ChallengeID   string                    `json:"login_challenge"`
 	}
 )
 
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
+		_ = c.Error(apperr.NewDirectError(enum.INVALID_REQUEST, err.Error()))
 		return
 	}
 
 	if err := c.ShouldBindQuery(&req); err != nil {
-		response.BadRequest(c, err.Error())
+		_ = c.Error(apperr.NewDirectError(enum.INVALID_REQUEST, err.Error()))
 		return
 	}
 
@@ -41,7 +43,7 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	if err := validator.Validate(c, req); err != nil {
-		response.BadRequest(c, err.Error())
+		_ = c.Error(apperr.NewDirectError(enum.INVALID_REQUEST, err.Error()))
 		return
 	}
 
@@ -49,7 +51,7 @@ func (h *Handler) Login(c *gin.Context) {
 
 	output, err := h.loginUC.Execute(c.Request.Context(), params)
 	if err != nil {
-		response.InternalServerError(c, err.Error())
+		_ = c.Error(err)
 		return
 	}
 
