@@ -1,12 +1,11 @@
 package auth
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/zencodecode/authorizer-service/internal/definition/enum"
 	"github.com/zencodecode/authorizer-service/internal/domain/apperr"
 	"github.com/zencodecode/authorizer-service/internal/usecase/auth"
+	"github.com/zencodecode/authorizer-service/pkg/response"
 	"github.com/zencodecode/authorizer-service/pkg/validation"
 )
 
@@ -55,13 +54,15 @@ func (h *Handler) Token(c *gin.Context) {
 		return
 	}
 
-	// RFC 6749 §5.1 — Successful Response
-	c.JSON(http.StatusOK, TokenResponse{
+	res := TokenResponse{
 		AccessToken:  output.AccessToken,
 		TokenType:    "Bearer",
-		ExpiresIn:    900, // 15 minutes
+		ExpiresIn:    900,
 		RefreshToken: output.RefreshToken,
-	})
+		Scope:        "openid profile",
+		IDToken:      output.IDToken,
+	}
+	response.Success(c, "success", res)
 }
 
 func toTokenParams(r TokenRequest) auth.TokenParams {

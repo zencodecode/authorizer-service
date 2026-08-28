@@ -36,6 +36,8 @@ type (
 		User         *entity.User
 		AccessToken  string
 		RefreshToken string
+		Scope        string
+		IDToken      string
 	}
 )
 
@@ -264,6 +266,8 @@ func (uc *tokenUsecase) Execute(ctx context.Context, params TokenParams) (*Token
 		User:         u,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
+		Scope:        "",
+		IDToken:      refresh.AccessTokenID.String(),
 	}
 
 	return token, nil

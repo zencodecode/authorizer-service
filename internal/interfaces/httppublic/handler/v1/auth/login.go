@@ -61,13 +61,13 @@ func (h *Handler) Login(c *gin.Context) {
 			organizations = append(organizations, serializer.SerializeToOrganization(*org))
 		}
 
-		r := LoginResponse{
+		res := LoginResponse{
 			User:          serializer.SerializeToUser(*output.User),
 			Organizations: organizations,
 			ChallengeID:   output.ChallengeID,
 		}
 
-		response.Success(c, "proceed to consent", r)
+		response.Success(c, "proceed to consent", res)
 		return
 	}
 	c.Redirect(http.StatusFound, *output.RedirectURL)

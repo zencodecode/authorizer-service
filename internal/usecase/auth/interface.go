@@ -19,4 +19,7 @@ type (
 	TokenUsecase interface {
 		Execute(ctx context.Context, params TokenParams) (*TokenResult, error)
 	}
+	RevokeUsecase interface {
+		Execute(ctx context.Context, params RevokeParams) (*RevokeResult, error)
+	}
 )
