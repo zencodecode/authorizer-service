@@ -1,4 +1,4 @@
-package auth
+package user
 
 import (
 	"context"
@@ -11,18 +11,6 @@ import (
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/user"
 	"github.com/zencodecode/authorizer-service/internal/domain/service"
 	"github.com/zencodecode/authorizer-service/pkg/hash"
-)
-
-type (
-	RegisterParams struct {
-		Email    string
-		Password string
-		Name     string
-	}
-
-	RegisterResult struct {
-		User *entity.User
-	}
 )
 
 type registerUsecase struct {

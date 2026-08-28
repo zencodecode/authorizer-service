@@ -1,16 +1,16 @@
-package auth
+package token
 
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/zencodecode/authorizer-service/internal/definition/enum"
 	"github.com/zencodecode/authorizer-service/internal/domain/apperr"
-	"github.com/zencodecode/authorizer-service/internal/usecase/auth"
+	tokenuc "github.com/zencodecode/authorizer-service/internal/usecase/token"
 	"github.com/zencodecode/authorizer-service/pkg/response"
 	"github.com/zencodecode/authorizer-service/pkg/validation"
 )
 
 type (
-	TokenRequest struct {
+	ExchangeRequest struct {
 		GrantType    string `form:"grant_type" binding:"required"`
 		Code         string `form:"code" binding:"required"`
 		RedirectURI  string `form:"redirect_uri" binding:"required"`
@@ -19,8 +19,8 @@ type (
 		CodeVerifier string `form:"code_verifier" binding:"required"`
 	}
 
-	// TokenResponse follows RFC 6749 §5.1 — Successful Response
-	TokenResponse struct {
+	// ExchangeResponse follows RFC 6749 §5.1 — Successful Response
+	ExchangeResponse struct {
 		AccessToken  string `json:"access_token"`
 		TokenType    string `json:"token_type"`
 		ExpiresIn    int    `json:"expires_in"`
@@ -30,8 +30,8 @@ type (
 	}
 )
 
-func (h *Handler) Token(c *gin.Context) {
-	var req TokenRequest
+func (h *Handler) Exchange(c *gin.Context) {
+	var req ExchangeRequest
 	if err := c.ShouldBind(&req); err != nil {
 		_ = c.Error(apperr.NewDirectError(enum.INVALID_REQUEST, err.Error()))
 		return
@@ -46,15 +46,15 @@ func (h *Handler) Token(c *gin.Context) {
 		return
 	}
 
-	params := toTokenParams(req)
+	params := toExchangeParams(req)
 
-	output, err := h.tokenUC.Execute(c.Request.Context(), params)
+	output, err := h.exchangeUC.Execute(c.Request.Context(), params)
 	if err != nil {
 		_ = c.Error(err)
 		return
 	}
 
-	res := TokenResponse{
+	res := ExchangeResponse{
 		AccessToken:  output.AccessToken,
 		TokenType:    "Bearer",
 		ExpiresIn:    900,
@@ -65,8 +65,8 @@ func (h *Handler) Token(c *gin.Context) {
 	response.Success(c, "success", res)
 }
 
-func toTokenParams(r TokenRequest) auth.TokenParams {
-	return auth.TokenParams{
+func toExchangeParams(r ExchangeRequest) tokenuc.ExchangeParams {
+	return tokenuc.ExchangeParams{
 		GrantType:    r.GrantType,
 		Code:         r.Code,
 		RedirectURI:  r.RedirectURI,

@@ -1,4 +1,4 @@
-package auth
+package discovery
 
 import (
 	"github.com/gin-gonic/gin"
@@ -6,7 +6,7 @@ import (
 	"github.com/zencodecode/authorizer-service/pkg/response"
 )
 
-func (h *Handler) Discovery(c *gin.Context) {
+func (h *Handler) OpenIDConfiguration(c *gin.Context) {
 	openID := auth.BuildOpenIDConfiguration(h.cfg.Auth.OIDC.Issuer)
 	response.Success(c, "discovery succceed", openID)
 }

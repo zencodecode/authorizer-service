@@ -1,4 +1,4 @@
-package auth
+package token
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 )
 
 type (
-	TokenParams struct {
+	ExchangeParams struct {
 		GrantType    string
 		Code         string
 		RedirectURI  string
@@ -32,7 +32,7 @@ type (
 		ClientSecret string
 		CodeVerifier string
 	}
-	TokenResult struct {
+	ExchangeResult struct {
 		User         *entity.User
 		AccessToken  string
 		RefreshToken string
@@ -41,7 +41,7 @@ type (
 	}
 )
 
-type tokenUsecase struct {
+type exchangeUsecase struct {
 	userRepo      user.Repository
 	appRepo       application.Repository
 	oauthCodeRepo oauthauthorizationcode.Repository
@@ -56,7 +56,7 @@ type tokenUsecase struct {
 	logger        service.Logger
 }
 
-func NewTokenUsecase(
+func NewExchangeUsecase(
 	userRepo user.Repository,
 	appRepo application.Repository,
 	oauthCodeRepo oauthauthorizationcode.Repository,
@@ -69,8 +69,8 @@ func NewTokenUsecase(
 	oauthRefRepo oauthrefreshtoken.Repository,
 	jwtSvc service.JWTService,
 	logger service.Logger,
-) TokenUsecase {
-	return &tokenUsecase{
+) ExchangeUsecase {
+	return &exchangeUsecase{
 		userRepo:      userRepo,
 		appRepo:       appRepo,
 		oauthCodeRepo: oauthCodeRepo,
@@ -86,7 +86,7 @@ func NewTokenUsecase(
 	}
 }
 
-func (uc *tokenUsecase) Execute(ctx context.Context, params TokenParams) (*TokenResult, error) {
+func (uc *exchangeUsecase) Execute(ctx context.Context, params ExchangeParams) (*ExchangeResult, error) {
 
 	app, err := uc.appRepo.GetByClientID(ctx, params.ClientID)
 	if err != nil {
@@ -262,7 +262,7 @@ func (uc *tokenUsecase) Execute(ctx context.Context, params TokenParams) (*Token
 		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to persist refresh token")
 	}
 
-	token := &TokenResult{
+	token := &ExchangeResult{
 		User:         u,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
