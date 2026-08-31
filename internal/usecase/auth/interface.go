@@ -12,4 +12,7 @@ type (
 	ConsentUsecase interface {
 		Execute(ctx context.Context, params ConsentParams) (*ConsentResult, error)
 	}
+	LogoutUsecase interface {
+		Execute(ctx context.Context, params LogoutParams) error
+	}
 )

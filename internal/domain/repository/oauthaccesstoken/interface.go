@@ -10,6 +10,7 @@ import (
 
 type Repository interface {
 	Create(ctx context.Context, token *entity.OAuthAccessToken) error
+	GetByID(ctx context.Context, id uuid.UUID) (*entity.OAuthAccessToken, error)
 	GetByTokenHash(ctx context.Context, tokenHash string) (*entity.OAuthAccessToken, error)
 	Revoke(ctx context.Context, id uuid.UUID) error
 	RevokeAllByUser(ctx context.Context, userID uuid.UUID) error

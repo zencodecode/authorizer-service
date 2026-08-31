@@ -54,7 +54,7 @@ func (h *Handler) Consent(c *gin.Context) {
 func toConsentParams(r ConsentRequest) auth.ConsentParams {
 	OrgID, _ := uuid.Parse(r.OrganizationID)
 	return auth.ConsentParams{
-		OrgID:       OrgID,
-		ChallengeID: r.ChallengeID,
+		OrganizationID: OrgID,
+		ChallengeID:    r.ChallengeID,
 	}
 }

@@ -25,6 +25,18 @@ func (r *oauthAccessTokenRepository) Create(ctx context.Context, token *entity.O
 	return r.db.WithContext(ctx).Create(m).Error
 }
 
+func (r *oauthAccessTokenRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.OAuthAccessToken, error) {
+	var m model.OAuthAccessToken
+	result := r.db.WithContext(ctx).Where("id = ?", id).First(&m)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, oauthaccesstoken.ErrNotFound
+	}
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return m.ToEntity(), nil
+}
+
 func (r *oauthAccessTokenRepository) GetByTokenHash(ctx context.Context, tokenHash string) (*entity.OAuthAccessToken, error) {
 	var m model.OAuthAccessToken
 	result := r.db.WithContext(ctx).Where("token_hash = ?", tokenHash).First(&m)

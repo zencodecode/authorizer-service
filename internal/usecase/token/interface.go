@@ -7,6 +7,6 @@ type (
 		Execute(ctx context.Context, params ExchangeParams) (*ExchangeResult, error)
 	}
 	RevokeUsecase interface {
-		Execute(ctx context.Context, params RevokeParams) (*RevokeResult, error)
+		Execute(ctx context.Context, params RevokeParams) error
 	}
 )

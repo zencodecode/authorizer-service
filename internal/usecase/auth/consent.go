@@ -20,8 +20,8 @@ import (
 
 type (
 	ConsentParams struct {
-		OrgID       uuid.UUID
-		ChallengeID string
+		OrganizationID uuid.UUID
+		ChallengeID    string
 	}
 
 	ConsentResult struct {
@@ -88,12 +88,12 @@ func (uc *consentUsecase) Execute(ctx context.Context, params ConsentParams) (*C
 		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query user")
 	}
 
-	orgUser, err := uc.orgUserRepo.GetByOrganizationAndUser(ctx, params.OrgID, u.ID)
+	orgUser, err := uc.orgUserRepo.GetByOrganizationAndUser(ctx, params.OrganizationID, u.ID)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to query organization user",
 			"action", "CONSENT",
 			"user_id", u.ID,
-			"organization_id", params.OrgID,
+			"organization_id", params.OrganizationID,
 			"error", err.Error(),
 		)
 		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query organization user")
@@ -113,7 +113,7 @@ func (uc *consentUsecase) Execute(ctx context.Context, params ConsentParams) (*C
 	if err != nil {
 		uc.logger.Error(ctx, "failed to query organization application",
 			"action", "CONSENT",
-			"organization_id", params.OrgID,
+			"organization_id", params.OrganizationID,
 			"application_id", sess.ClientID,
 			"error", err.Error(),
 		)
@@ -128,7 +128,7 @@ func (uc *consentUsecase) Execute(ctx context.Context, params ConsentParams) (*C
 	if err != nil {
 		uc.logger.Error(ctx, "failed to query organization",
 			"action", "CONSENT",
-			"organization_id", params.OrgID,
+			"organization_id", params.OrganizationID,
 			"error", err.Error(),
 		)
 		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query organization")
