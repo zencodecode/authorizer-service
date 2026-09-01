@@ -59,7 +59,7 @@ func (h *Handler) Exchange(c *gin.Context) {
 		TokenType:    "Bearer",
 		ExpiresIn:    900,
 		RefreshToken: output.RefreshToken,
-		Scope:        "openid profile",
+		Scope:        output.Scope,
 		IDToken:      output.IDToken,
 	}
 	response.Success(c, "success", res)

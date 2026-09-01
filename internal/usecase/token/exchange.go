@@ -2,6 +2,8 @@ package token
 
 import (
 	"context"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -150,17 +152,23 @@ func (uc *exchangeUsecase) Execute(ctx context.Context, params ExchangeParams) (
 		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query user")
 	}
 
-	org, err := uc.orgRepo.GetByID(ctx, *oauthcode.OrganizationID)
-	if err != nil {
-		uc.logger.Error(ctx, "failed to query organization",
-			"action", "TOKEN",
-			"organization_id", oauthcode.OrganizationID,
-			"error", err.Error(),
-		)
-		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query organization")
+	var org *entity.Organization
+	var orgID *uuid.UUID
+	if oauthcode.OrganizationID != nil {
+		o, err := uc.orgRepo.GetByID(ctx, *oauthcode.OrganizationID)
+		if err != nil {
+			uc.logger.Error(ctx, "failed to query organization",
+				"action", "TOKEN",
+				"organization_id", oauthcode.OrganizationID,
+				"error", err.Error(),
+			)
+			return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query organization")
+		}
+		org = o
+		orgID = &org.ID
 	}
 
-	roles, err := uc.userRoleRepo.ListRolesByUser(ctx, u.ID, &org.ID)
+	roles, err := uc.userRoleRepo.ListRolesByUser(ctx, u.ID, orgID)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to query roles",
 			"action", "TOKEN",
@@ -202,11 +210,22 @@ func (uc *exchangeUsecase) Execute(ctx context.Context, params ExchangeParams) (
 			IssuedAt:  jwt.NewNumericDate(now),
 			ID:        uuid.Must(uuid.NewV7()).String(),
 		},
-		Name:        u.Name,
-		Email:       u.Email,
-		Scopes:      []string{"openid", "profile", "email"},
+		Scopes:      oauthcode.Scopes,
 		Roles:       roleSlugs,
 		Permissions: permSlugs,
+	}
+
+	if slices.Contains(oauthcode.Scopes, "profile") {
+		claims.Name = u.Name
+	}
+	if slices.Contains(oauthcode.Scopes, "email") {
+		claims.Email = u.Email
+	}
+
+	if org != nil {
+		orgIDStr := org.ID.String()
+		claims.OrgID = &orgIDStr
+		claims.OrgSlug = &org.Slug
 	}
 
 	accessToken, err := uc.jwtSvc.GenerateAccessToken(ctx, claims)
@@ -223,7 +242,7 @@ func (uc *exchangeUsecase) Execute(ctx context.Context, params ExchangeParams) (
 		ID:             uuid.Must(uuid.NewV7()),
 		TokenHash:      hash.HashSHA256(accessToken),
 		UserID:         u.ID,
-		OrganizationID: &org.ID,
+		OrganizationID: orgID,
 		ApplicationID:  app.ID,
 		Scopes:         oauthcode.Scopes,
 		ExpiresAt:      claims.ExpiresAt.Time,
@@ -266,7 +285,7 @@ func (uc *exchangeUsecase) Execute(ctx context.Context, params ExchangeParams) (
 		User:         u,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		Scope:        "",
+		Scope:        strings.Join(oauthcode.Scopes, " "),
 		IDToken:      refresh.AccessTokenID.String(),
 	}
 
