@@ -10,6 +10,7 @@ type Handler struct {
 	loginUC     auth.LoginUsecase
 	consentUC   auth.ConsentUsecase
 	logoutUC    auth.LogoutUsecase
+	userInfoUC  auth.UserInfoUsecase
 	jwtSvc      service.JWTService
 	logger      service.Logger
 }
@@ -19,6 +20,7 @@ func New(
 	loginUC auth.LoginUsecase,
 	consentUC auth.ConsentUsecase,
 	logoutUC auth.LogoutUsecase,
+	userInfoUC auth.UserInfoUsecase,
 	jwtSvc service.JWTService,
 	logger service.Logger,
 ) *Handler {
@@ -27,6 +29,7 @@ func New(
 		loginUC:     loginUC,
 		consentUC:   consentUC,
 		logoutUC:    logoutUC,
+		userInfoUC:  userInfoUC,
 		jwtSvc:      jwtSvc,
 		logger:      logger,
 	}

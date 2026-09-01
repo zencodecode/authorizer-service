@@ -15,4 +15,7 @@ type (
 	LogoutUsecase interface {
 		Execute(ctx context.Context, params LogoutParams) error
 	}
+	UserInfoUsecase interface {
+		Execute(ctx context.Context, params UserInfoParams) (*UserInfoResult, error)
+	}
 )
