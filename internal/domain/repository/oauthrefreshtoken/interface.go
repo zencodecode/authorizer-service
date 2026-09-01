@@ -13,5 +13,6 @@ type Repository interface {
 	GetByTokenHash(ctx context.Context, tokenHash string) (*entity.OAuthRefreshToken, error)
 	Revoke(ctx context.Context, id uuid.UUID) error
 	RevokeByAccessTokenID(ctx context.Context, accessTokenID uuid.UUID) error
+	RevokeAllByUserAndApplication(ctx context.Context, userID, applicationID uuid.UUID) error
 	DeleteExpired(ctx context.Context, before time.Time) error
 }

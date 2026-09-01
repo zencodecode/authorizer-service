@@ -53,6 +53,17 @@ func (r *oauthRefreshTokenRepository) RevokeByAccessTokenID(ctx context.Context,
 		Update("revoked_at", now).Error
 }
 
+func (r *oauthRefreshTokenRepository) RevokeAllByUserAndApplication(ctx context.Context, userID, applicationID uuid.UUID) error {
+	return r.db.WithContext(ctx).Exec(`
+		UPDATE oauth_refresh_tokens
+		SET revoked_at = NOW()
+		WHERE revoked_at IS NULL
+		  AND access_token_id IN (
+		      SELECT id FROM oauth_access_tokens
+		      WHERE user_id = ? AND application_id = ?
+		  )`, userID, applicationID).Error
+}
+
 func (r *oauthRefreshTokenRepository) DeleteExpired(ctx context.Context, before time.Time) error {
 	return r.db.WithContext(ctx).
 		Where("expires_at < ?", before).

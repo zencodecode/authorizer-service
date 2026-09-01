@@ -83,5 +83,11 @@ func (uc *logoutUsecase) revokeAllToken(ctx context.Context, userID, appID uuid.
 		return false, apperr.NewDirectError(enum.SERVER_ERROR, "failed to revoke access token")
 	}
 
+	if err := uc.oauthRefRepo.RevokeAllByUserAndApplication(ctx, userID, appID); err != nil {
+		uc.logger.Error(ctx, "failed to revoke refresh token",
+			"action", "REVOKE", "application_id", appID, "error", err.Error())
+		return false, apperr.NewDirectError(enum.SERVER_ERROR, "failed to revoke refresh token")
+	}
+
 	return true, nil
 }
