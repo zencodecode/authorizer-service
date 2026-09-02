@@ -6,6 +6,7 @@ type (
 		Auth       AuthConfig
 		Interfaces InterfacesConfig
 		SMTP       SMTP
+		RabbitMQ   RabbitMQ
 	}
 
 	DatabaseConfig struct {
@@ -60,6 +61,11 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	ramqCfg, err := LoadRabbitMQConfig()
+	if err != nil {
+		return Config{}, err
+	}
+
 	return Config{
 		Database: DatabaseConfig{Postgres: pgCfg, Redis: rdCfg},
 		Auth: AuthConfig{
@@ -70,6 +76,7 @@ func Load() (Config, error) {
 			HTTPPublic:  pblCfg,
 			HTTPPrivate: pvtCfg,
 		},
-		SMTP: smtpCfg,
+		SMTP:     smtpCfg,
+		RabbitMQ: ramqCfg,
 	}, nil
 }
