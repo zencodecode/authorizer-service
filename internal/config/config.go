@@ -5,6 +5,7 @@ type (
 		Database   DatabaseConfig
 		Auth       AuthConfig
 		Interfaces InterfacesConfig
+		SMTP       SMTP
 	}
 
 	DatabaseConfig struct {
@@ -54,6 +55,11 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	smtpCfg, err := LoadSMTPConfig()
+	if err != nil {
+		return Config{}, err
+	}
+
 	return Config{
 		Database: DatabaseConfig{Postgres: pgCfg, Redis: rdCfg},
 		Auth: AuthConfig{
@@ -64,5 +70,6 @@ func Load() (Config, error) {
 			HTTPPublic:  pblCfg,
 			HTTPPrivate: pvtCfg,
 		},
+		SMTP: smtpCfg,
 	}, nil
 }

@@ -18,4 +18,7 @@ type (
 	UserInfoUsecase interface {
 		Execute(ctx context.Context, params UserInfoParams) (*UserInfoResult, error)
 	}
+	RegisterUsecase interface {
+		Execute(ctx context.Context, params RegisterParams) (*RegisterResult, error)
+	}
 )
