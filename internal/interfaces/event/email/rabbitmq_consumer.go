@@ -8,6 +8,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/zencodecode/authorizer-service/internal/domain/service"
 	"github.com/zencodecode/authorizer-service/internal/infrastructure/driver/email"
+	"github.com/zencodecode/authorizer-service/internal/infrastructure/driver/rabbitmq"
 )
 
 const maxRetries = 3
@@ -27,7 +28,7 @@ func NewConsumer(ch *amqp.Channel, smtp *email.SMTPSender, logger service.Logger
 }
 
 func (c *RabbitmqConsumer) Start(ctx context.Context) error {
-	if err := SetupTopology(c.ch); err != nil {
+	if err := rabbitmq.EmailSetupTopology(c.ch); err != nil {
 		return fmt.Errorf("failed to setup topology: %w", err)
 	}
 
@@ -36,7 +37,7 @@ func (c *RabbitmqConsumer) Start(ctx context.Context) error {
 	}
 
 	msgs, err := c.ch.Consume(
-		MainQueue,
+		rabbitmq.MainQueue,
 		"",
 		false,
 		false,
@@ -119,9 +120,10 @@ func (c *RabbitmqConsumer) sendToFailedQueue(ctx context.Context, msg amqp.Deliv
 	headers["x-failure-reason"] = reason
 
 	err := c.ch.PublishWithContext(ctx,
-		FailedExchange,
-		FailedQueue,
-		false, false,
+		rabbitmq.FailedExchange,
+		rabbitmq.FailedQueue,
+		false,
+		false,
 		amqp.Publishing{
 			ContentType:  msg.ContentType,
 			Body:         msg.Body,

@@ -7,12 +7,7 @@ import (
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/zencodecode/authorizer-service/internal/domain/service"
-)
-
-const (
-	exchangeName = "authorizer.email"
-	queueName    = "email.send"
-	routingKey   = "email.send"
+	"github.com/zencodecode/authorizer-service/internal/infrastructure/driver/rabbitmq"
 )
 
 type rabbitmqPublisher struct {
@@ -21,41 +16,8 @@ type rabbitmqPublisher struct {
 }
 
 func NewPublisher(ch *amqp.Channel, logger service.Logger) (service.EmailSender, error) {
-	err := ch.ExchangeDeclare(
-		exchangeName,
-		"direct",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to declare exchange: %w", err)
-	}
-
-	_, err = ch.QueueDeclare(
-		queueName,
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to declare queue: %w", err)
-	}
-
-	err = ch.QueueBind(
-		queueName,
-		routingKey,
-		exchangeName,
-		false,
-		nil,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to bind queue: %w", err)
+	if err := rabbitmq.EmailSetupTopology(ch); err != nil {
+		return nil, fmt.Errorf("failed to setup topology: %w", err)
 	}
 
 	return &rabbitmqPublisher{ch: ch, logger: logger}, nil
@@ -68,8 +30,8 @@ func (s *rabbitmqPublisher) Send(ctx context.Context, params service.SendEmailPa
 	}
 
 	err = s.ch.PublishWithContext(ctx,
-		exchangeName,
-		routingKey,
+		rabbitmq.MainExchange,
+		rabbitmq.MainQueue,
 		false,
 		false,
 		amqp.Publishing{

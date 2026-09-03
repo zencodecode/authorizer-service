@@ -1,22 +1,38 @@
-package email
+package rabbitmq
 
 import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 const (
-	MainQueue = "email.send"
+	MainExchange = "authorizer.email"
+	MainQueue    = "email.send"
+	MainRouting  = "email.send"
 
 	RetryExchange = "email.retry.exchange"
 	RetryQueue    = "email.send.retry"
+	RetryRouting  = "email.send.retry"
 
 	FailedExchange = "email.failed.exchange"
 	FailedQueue    = "email.send.failed"
+	FailedRouting  = "email.send.failed"
 
 	RetryTTLMs = 30000
 )
 
-func SetupTopology(ch *amqp.Channel) error {
+func EmailSetupTopology(ch *amqp.Channel) error {
+	if err := ch.ExchangeDeclare(
+		MainExchange,
+		"direct",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	); err != nil {
+		return err
+	}
+
 	if err := ch.ExchangeDeclare(
 		RetryExchange,
 		"direct",
@@ -47,7 +63,7 @@ func SetupTopology(ch *amqp.Channel) error {
 
 	if err := ch.QueueBind(
 		RetryQueue,
-		RetryQueue,
+		RetryRouting,
 		RetryExchange,
 		false,
 		nil,
@@ -80,7 +96,7 @@ func SetupTopology(ch *amqp.Channel) error {
 
 	if err := ch.QueueBind(
 		FailedQueue,
-		FailedQueue,
+		FailedRouting,
 		FailedExchange,
 		false,
 		nil,
@@ -98,6 +114,16 @@ func SetupTopology(ch *amqp.Channel) error {
 			"x-dead-letter-exchange":    RetryExchange,
 			"x-dead-letter-routing-key": RetryQueue,
 		},
+	); err != nil {
+		return err
+	}
+
+	if err := ch.QueueBind(
+		MainQueue,
+		MainRouting,
+		MainExchange,
+		false,
+		nil,
 	); err != nil {
 		return err
 	}
