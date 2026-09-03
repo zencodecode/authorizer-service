@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/zencodecode/authorizer-service/internal/config"
+	"github.com/zencodecode/authorizer-service/internal/domain/service"
 	"github.com/zencodecode/authorizer-service/internal/infrastructure/driver/database/postgres"
 	"github.com/zencodecode/authorizer-service/internal/infrastructure/driver/database/redis"
-	"github.com/zencodecode/authorizer-service/internal/infrastructure/driver/logger"
 )
 
 const healthCheckTimeout = 5 * time.Second
@@ -17,10 +17,10 @@ type ConnectionManager struct {
 	Postgres *postgres.Connection
 	Redis    *redis.Connection
 	Cfg      config.DatabaseConfig
-	Logger   *logger.Logger
+	Logger   service.Logger
 }
 
-func NewConnectionManager(ctx context.Context, cfg config.DatabaseConfig, logger *logger.Logger) (*ConnectionManager, error) {
+func NewConnectionManager(ctx context.Context, cfg config.DatabaseConfig, logger service.Logger) (*ConnectionManager, error) {
 	pg := postgres.NewConnection(&cfg.Postgres, logger)
 	if err := pg.Connect(ctx); err != nil {
 		return nil, fmt.Errorf("connect postgres: %w", err)

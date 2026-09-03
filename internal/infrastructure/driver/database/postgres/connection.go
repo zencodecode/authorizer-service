@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/zencodecode/authorizer-service/internal/config"
-	"github.com/zencodecode/authorizer-service/internal/infrastructure/driver/logger"
+	"github.com/zencodecode/authorizer-service/internal/domain/service"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -15,11 +15,11 @@ import (
 type Connection struct {
 	postgresClient *gorm.DB
 	config         *config.Postgres
-	logger         *logger.Logger
+	logger         service.Logger
 	shutdownOnce   sync.Once
 }
 
-func NewConnection(cfg *config.Postgres, log *logger.Logger) *Connection {
+func NewConnection(cfg *config.Postgres, log service.Logger) *Connection {
 	return &Connection{
 		config: cfg,
 		logger: log,

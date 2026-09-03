@@ -8,17 +8,17 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/zencodecode/authorizer-service/internal/config"
-	"github.com/zencodecode/authorizer-service/internal/infrastructure/driver/logger"
+	"github.com/zencodecode/authorizer-service/internal/domain/service"
 )
 
 type Connection struct {
 	redisClient  *redis.Client
 	config       *config.Redis
-	logger       *logger.Logger
+	logger       service.Logger
 	shutdownOnce sync.Once
 }
 
-func NewConnection(cfg *config.Redis, log *logger.Logger) *Connection {
+func NewConnection(cfg *config.Redis, log service.Logger) *Connection {
 	return &Connection{
 		config: cfg,
 		logger: log,
