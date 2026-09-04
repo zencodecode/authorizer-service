@@ -7,7 +7,6 @@ import (
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/zencodecode/authorizer-service/internal/domain/service"
-	"github.com/zencodecode/authorizer-service/internal/infrastructure/driver/email"
 	"github.com/zencodecode/authorizer-service/internal/infrastructure/driver/rabbitmq"
 )
 
@@ -15,14 +14,14 @@ const maxRetries = 3
 
 type RabbitmqConsumer struct {
 	ch     *amqp.Channel
-	smtp   *email.SMTPSender
+	mailer service.EmailSender
 	logger service.Logger
 }
 
-func NewConsumer(ch *amqp.Channel, smtp *email.SMTPSender, logger service.Logger) *RabbitmqConsumer {
+func NewConsumer(ch *amqp.Channel, mailer service.EmailSender, logger service.Logger) *RabbitmqConsumer {
 	return &RabbitmqConsumer{
 		ch:     ch,
-		smtp:   smtp,
+		mailer: mailer,
 		logger: logger,
 	}
 }
@@ -57,76 +56,77 @@ func (c *RabbitmqConsumer) Start(ctx context.Context) error {
 			c.logger.Info(ctx, "email consumer stopped")
 			return nil
 
-		case msg, ok := <-msgs:
+		case delivery, ok := <-msgs:
 			if !ok {
 				return fmt.Errorf("channel closed")
 			}
-			c.handleMessage(ctx, msg)
+			c.handleMessage(ctx, delivery)
 		}
 	}
 }
 
-func (c *RabbitmqConsumer) handleMessage(ctx context.Context, msg amqp.Delivery) {
+func (c *RabbitmqConsumer) handleMessage(ctx context.Context, delivery amqp.Delivery) {
 	defer func() {
 		if r := recover(); r != nil {
 			c.logger.Error(ctx, "panic while handling email message", "recover", fmt.Sprintf("%v", r))
-			c.sendToFailedQueue(ctx, msg, "panic recovered")
+			c.sendToFailedQueue(ctx, delivery, "panic recovered")
+			delivery.Ack(false)
 		}
 	}()
 
-	var params service.SendEmailParams
-	if err := json.Unmarshal(msg.Body, &params); err != nil {
+	var msg service.EmailMessage
+	if err := json.Unmarshal(delivery.Body, &msg); err != nil {
 		c.logger.Error(ctx, "failed to unmarshal email message",
 			"error", err.Error(),
 		)
-		c.sendToFailedQueue(ctx, msg, "unmarshal error: "+err.Error())
-		msg.Ack(false)
+		c.sendToFailedQueue(ctx, delivery, "unmarshal error: "+err.Error())
+		delivery.Ack(false)
 		return
 	}
 
-	if err := c.smtp.Send(ctx, params.To, params.Subject, params.Body); err != nil {
-		retryCount := getRetryCount(msg)
+	if err := c.mailer.Send(ctx, msg.To, msg.Subject, msg.Body); err != nil {
+		retryCount := getRetryCount(delivery)
 
 		if retryCount >= maxRetries {
 			c.logger.Error(ctx, "email send failed permanently, giving up",
-				"to", params.To,
+				"to", msg.To,
 				"retries", retryCount,
 				"error", err.Error(),
 			)
-			c.sendToFailedQueue(ctx, msg, err.Error())
-			msg.Ack(false)
+			c.sendToFailedQueue(ctx, delivery, err.Error())
+			delivery.Ack(false)
 			return
 		}
 
 		c.logger.Error(ctx, "failed to send email, will retry",
-			"to", params.To,
+			"to", msg.To,
 			"retries", retryCount+1,
 			"error", err.Error(),
 		)
 
-		msg.Nack(false, false)
+		delivery.Nack(false, false)
 		return
 	}
 
-	msg.Ack(false)
-	c.logger.Info(ctx, "email sent successfully", "to", params.To)
+	delivery.Ack(false)
+	c.logger.Info(ctx, "email sent successfully", "to", msg.To)
 }
 
-func (c *RabbitmqConsumer) sendToFailedQueue(ctx context.Context, msg amqp.Delivery, reason string) {
+func (c *RabbitmqConsumer) sendToFailedQueue(ctx context.Context, delivery amqp.Delivery, reason string) {
 	headers := amqp.Table{}
-	for k, v := range msg.Headers {
+	for k, v := range delivery.Headers {
 		headers[k] = v
 	}
 	headers["x-failure-reason"] = reason
 
 	err := c.ch.PublishWithContext(ctx,
 		rabbitmq.FailedExchange,
-		rabbitmq.FailedQueue,
+		rabbitmq.FailedRouting,
 		false,
 		false,
 		amqp.Publishing{
-			ContentType:  msg.ContentType,
-			Body:         msg.Body,
+			ContentType:  delivery.ContentType,
+			Body:         delivery.Body,
 			Headers:      headers,
 			DeliveryMode: amqp.Persistent,
 		},
@@ -136,8 +136,8 @@ func (c *RabbitmqConsumer) sendToFailedQueue(ctx context.Context, msg amqp.Deliv
 	}
 }
 
-func getRetryCount(msg amqp.Delivery) int64 {
-	deaths, ok := msg.Headers["x-death"].([]interface{})
+func getRetryCount(delivery amqp.Delivery) int64 {
+	deaths, ok := delivery.Headers["x-death"].([]interface{})
 	if !ok || len(deaths) == 0 {
 		return 0
 	}

@@ -23,21 +23,27 @@ func NewPublisher(ch *amqp.Channel, logger service.Logger) (service.EmailSender,
 	return &rabbitmqPublisher{ch: ch, logger: logger}, nil
 }
 
-func (s *rabbitmqPublisher) Send(ctx context.Context, params service.SendEmailParams) error {
-	body, err := json.Marshal(params)
+func (s *rabbitmqPublisher) Send(ctx context.Context, to, subject, body string) error {
+	payload := service.EmailMessage{
+		To:      to,
+		Subject: subject,
+		Body:    body,
+	}
+
+	data, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal email params: %w", err)
 	}
 
 	err = s.ch.PublishWithContext(ctx,
 		rabbitmq.MainExchange,
-		rabbitmq.MainQueue,
+		rabbitmq.MainRouting,
 		false,
 		false,
 		amqp.Publishing{
 			DeliveryMode: amqp.Persistent,
 			ContentType:  "application/json",
-			Body:         body,
+			Body:         data,
 		},
 	)
 	if err != nil {
@@ -45,8 +51,8 @@ func (s *rabbitmqPublisher) Send(ctx context.Context, params service.SendEmailPa
 	}
 
 	s.logger.Info(ctx, "email message published to queue",
-		"to", params.To,
-		"subject", params.Subject,
+		"to", to,
+		"subject", subject,
 	)
 
 	return nil

@@ -129,11 +129,10 @@ func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (
 	verifyURL := fmt.Sprintf("%s/verify-email?token=%s",
 		uc.cfg.Auth.OIDC.Issuer, token)
 
-	err = uc.emailSender.Send(ctx, service.SendEmailParams{
-		To:      user.Email,
-		Subject: "Verify your email",
-		Body:    fmt.Sprintf(`<p>Click <a href="%s">here</a> to verify your email.</p>`, verifyURL),
-	})
+	to, subject, body := user.Email, "Verify your email",
+		fmt.Sprintf(`<p>Click <a href="%s">here</a> to verify your email.</p>`, verifyURL)
+
+	err = uc.emailSender.Send(ctx, to, subject, body)
 
 	if err != nil {
 		uc.logger.Error(ctx, "failed to send verification email",
