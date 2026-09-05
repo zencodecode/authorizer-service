@@ -1,6 +1,7 @@
 package token
 
 import (
+	"github.com/gin-gonic/gin"
 	"github.com/zencodecode/authorizer-service/internal/domain/service"
 	"github.com/zencodecode/authorizer-service/internal/usecase/token"
 )
@@ -8,17 +9,35 @@ import (
 type Handler struct {
 	exchangeUC token.ExchangeUsecase
 	revokeUC   token.RevokeUsecase
+	refreshUC  token.RefreshUsecase
 	logger     service.Logger
 }
 
 func New(
 	exchangeUC token.ExchangeUsecase,
 	revokeUC token.RevokeUsecase,
+	refreshUC token.RefreshUsecase,
 	logger service.Logger,
 ) *Handler {
 	return &Handler{
 		exchangeUC: exchangeUC,
 		revokeUC:   revokeUC,
+		refreshUC:  refreshUC,
 		logger:     logger,
+	}
+}
+
+func (h *Handler) Token(c *gin.Context) {
+	grantType := c.PostForm("grant_type")
+	switch grantType {
+	case "authorization_code":
+		h.Exchange(c)
+	case "refresh_token":
+		h.Refresh(c)
+	default:
+		c.JSON(400, gin.H{
+			"error":             "unsupported_grant_type",
+			"error_description": "grant_type must be authorization_code or refresh_token",
+		})
 	}
 }

@@ -9,4 +9,7 @@ type (
 	RevokeUsecase interface {
 		Execute(ctx context.Context, params RevokeParams) error
 	}
+	RefreshUsecase interface {
+		Execute(ctx context.Context, params RefreshParams) (*RefreshResult, error)
+	}
 )

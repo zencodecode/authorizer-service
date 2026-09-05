@@ -7,7 +7,6 @@ import (
 	"github.com/zencodecode/authorizer-service/internal/definition/enum"
 	"github.com/zencodecode/authorizer-service/internal/domain/apperr"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/application"
-	"github.com/zencodecode/authorizer-service/internal/domain/repository/oauthaccesstoken"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/oauthrefreshtoken"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/user"
 	"github.com/zencodecode/authorizer-service/internal/domain/service"
@@ -23,7 +22,6 @@ type (
 type logoutUsecase struct {
 	userRepo     user.Repository
 	appRepo      application.Repository
-	oauthAccRepo oauthaccesstoken.Repository
 	oauthRefRepo oauthrefreshtoken.Repository
 	logger       service.Logger
 }
@@ -31,14 +29,12 @@ type logoutUsecase struct {
 func NewLogoutUsecase(
 	userRepo user.Repository,
 	appRepo application.Repository,
-	oauthAccRepo oauthaccesstoken.Repository,
 	oauthRefRepo oauthrefreshtoken.Repository,
 	logger service.Logger,
 ) LogoutUsecase {
 	return &logoutUsecase{
 		userRepo:     userRepo,
 		appRepo:      appRepo,
-		oauthAccRepo: oauthAccRepo,
 		oauthRefRepo: oauthRefRepo,
 		logger:       logger,
 	}
@@ -77,12 +73,6 @@ func (uc *logoutUsecase) Execute(ctx context.Context, params LogoutParams) error
 }
 
 func (uc *logoutUsecase) revokeAllToken(ctx context.Context, userID, appID uuid.UUID) (bool, error) {
-	if err := uc.oauthAccRepo.RevokeAllByUserAndApplication(ctx, userID, appID); err != nil {
-		uc.logger.Error(ctx, "failed to revoke access token",
-			"action", "REVOKE", "application_id", appID, "error", err.Error())
-		return false, apperr.NewDirectError(enum.SERVER_ERROR, "failed to revoke access token")
-	}
-
 	if err := uc.oauthRefRepo.RevokeAllByUserAndApplication(ctx, userID, appID); err != nil {
 		uc.logger.Error(ctx, "failed to revoke refresh token",
 			"action", "REVOKE", "application_id", appID, "error", err.Error())

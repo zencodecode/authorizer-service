@@ -35,6 +35,12 @@ func (s *jwtService) GenerateAccessToken(_ context.Context, claims *entity.Claim
 	return token.SignedString(s.privateKey)
 }
 
+func (s *jwtService) GenerateIDToken(_ context.Context, claims *entity.IDTokenClaims) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	token.Header["kid"] = s.keyID
+	return token.SignedString(s.privateKey)
+}
+
 func (s *jwtService) ValidateAccessToken(_ context.Context, tokenString string) (*entity.Claims, error) {
 	claims := &entity.Claims{}
 	parsedToken, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {

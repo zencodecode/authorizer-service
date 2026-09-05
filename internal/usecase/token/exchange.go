@@ -12,7 +12,6 @@ import (
 	"github.com/zencodecode/authorizer-service/internal/domain/apperr"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/application"
-	"github.com/zencodecode/authorizer-service/internal/domain/repository/oauthaccesstoken"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/oauthauthorizationcode"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/oauthrefreshtoken"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/organization"
@@ -40,6 +39,7 @@ type (
 		RefreshToken string
 		Scope        string
 		IDToken      string
+		ExpiresIn    int
 	}
 )
 
@@ -52,10 +52,10 @@ type exchangeUsecase struct {
 	userRoleRepo  userrole.Repository
 	permRepo      permission.Repository
 	rolePermRepo  rolepermission.Repository
-	oauthAccRepo  oauthaccesstoken.Repository
 	oauthRefRepo  oauthrefreshtoken.Repository
 	jwtSvc        service.JWTService
 	logger        service.Logger
+	issuerURL     string
 }
 
 func NewExchangeUsecase(
@@ -67,10 +67,10 @@ func NewExchangeUsecase(
 	userRoleRepo userrole.Repository,
 	permRepo permission.Repository,
 	rolePermRepo rolepermission.Repository,
-	oauthAccRepo oauthaccesstoken.Repository,
 	oauthRefRepo oauthrefreshtoken.Repository,
 	jwtSvc service.JWTService,
 	logger service.Logger,
+	issuerURL string,
 ) ExchangeUsecase {
 	return &exchangeUsecase{
 		userRepo:      userRepo,
@@ -81,10 +81,10 @@ func NewExchangeUsecase(
 		userRoleRepo:  userRoleRepo,
 		permRepo:      permRepo,
 		rolePermRepo:  rolePermRepo,
-		oauthAccRepo:  oauthAccRepo,
 		oauthRefRepo:  oauthRefRepo,
 		jwtSvc:        jwtSvc,
 		logger:        logger,
+		issuerURL:     issuerURL,
 	}
 }
 
@@ -93,7 +93,7 @@ func (uc *exchangeUsecase) Execute(ctx context.Context, params ExchangeParams) (
 	app, err := uc.appRepo.GetByClientID(ctx, params.ClientID)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to query applicaton",
-			"action", "TOKEN",
+			"action", "EXCHANGE",
 			"client_id", &params.ClientID,
 			"error", err.Error(),
 		)
@@ -109,7 +109,7 @@ func (uc *exchangeUsecase) Execute(ctx context.Context, params ExchangeParams) (
 	oauthcode, err := uc.oauthCodeRepo.GetByCodeHash(ctx, codeHash)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to query oauth authorization code",
-			"action", "TOKEN",
+			"action", "EXCHANGE",
 			"code_hash", codeHash,
 			"error", err.Error(),
 		)
@@ -135,17 +135,17 @@ func (uc *exchangeUsecase) Execute(ctx context.Context, params ExchangeParams) (
 
 	if err := uc.oauthCodeRepo.MarkUsed(ctx, oauthcode.ID); err != nil {
 		uc.logger.Error(ctx, "failed to update oauth_authorization_code used_at",
-			"action", "TOKEN",
+			"action", "EXCHANGE",
 			"code_id", oauthcode.ID,
 			"error", err.Error(),
 		)
 		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to update oauth_authorization_code used_at")
 	}
 
-	u, err := uc.userRepo.GetByID(ctx, oauthcode.UserID)
+	user, err := uc.userRepo.GetByID(ctx, oauthcode.UserID)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to query user",
-			"action", "TOKEN",
+			"action", "EXCHANGE",
 			"user_id", oauthcode.UserID,
 			"error", err.Error(),
 		)
@@ -158,7 +158,7 @@ func (uc *exchangeUsecase) Execute(ctx context.Context, params ExchangeParams) (
 		o, err := uc.orgRepo.GetByID(ctx, *oauthcode.OrganizationID)
 		if err != nil {
 			uc.logger.Error(ctx, "failed to query organization",
-				"action", "TOKEN",
+				"action", "EXCHANGE",
 				"organization_id", oauthcode.OrganizationID,
 				"error", err.Error(),
 			)
@@ -168,11 +168,11 @@ func (uc *exchangeUsecase) Execute(ctx context.Context, params ExchangeParams) (
 		orgID = &org.ID
 	}
 
-	roles, err := uc.userRoleRepo.ListRolesByUser(ctx, u.ID, orgID)
+	roles, err := uc.userRoleRepo.ListRolesByUser(ctx, user.ID, orgID)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to query roles",
-			"action", "TOKEN",
-			"user_id", u.ID,
+			"action", "EXCHANGE",
+			"user_id", user.ID,
 			"error", err.Error(),
 		)
 		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to query user roles")
@@ -203,8 +203,8 @@ func (uc *exchangeUsecase) Execute(ctx context.Context, params ExchangeParams) (
 
 	claims := &entity.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    "authorizer-service",
-			Subject:   u.ID.String(),
+			Issuer:    uc.issuerURL,
+			Subject:   user.ID.String(),
 			Audience:  jwt.ClaimStrings{app.ClientID},
 			ExpiresAt: jwt.NewNumericDate(now.Add(expiresIn)),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -215,11 +215,37 @@ func (uc *exchangeUsecase) Execute(ctx context.Context, params ExchangeParams) (
 		Permissions: permSlugs,
 	}
 
-	if slices.Contains(oauthcode.Scopes, "profile") {
-		claims.Name = u.Name
-	}
-	if slices.Contains(oauthcode.Scopes, "email") {
-		claims.Email = u.Email
+	var idToken string
+	if slices.Contains(oauthcode.Scopes, "openid") {
+		idClaims := &entity.IDTokenClaims{
+			RegisteredClaims: jwt.RegisteredClaims{
+				Issuer:    uc.issuerURL,
+				Subject:   user.ID.String(),
+				Audience:  jwt.ClaimStrings{app.ClientID},
+				ExpiresAt: jwt.NewNumericDate(now.Add(expiresIn)),
+				IssuedAt:  jwt.NewNumericDate(now),
+				ID:        uuid.Must(uuid.NewV7()).String(),
+			},
+			AuthTime: now.Unix(),
+		}
+
+		if slices.Contains(oauthcode.Scopes, "profile") {
+			idClaims.Name = user.Name
+		}
+
+		if slices.Contains(oauthcode.Scopes, "email") {
+			idClaims.Email = user.Email
+			idClaims.EmailVerified = user.EmailVerifiedAt != nil
+		}
+
+		idToken, err = uc.jwtSvc.GenerateIDToken(ctx, idClaims)
+		if err != nil {
+			uc.logger.Error(ctx, "failed to generate id token",
+				"action", "EXCHANGE",
+				"user_id", user.ID,
+				"error", err.Error())
+			return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to generate id token")
+		}
 	}
 
 	if org != nil {
@@ -231,62 +257,49 @@ func (uc *exchangeUsecase) Execute(ctx context.Context, params ExchangeParams) (
 	accessToken, err := uc.jwtSvc.GenerateAccessToken(ctx, claims)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to generate access token",
-			"action", "TOKEN",
-			"user_id", u.ID,
+			"action", "EXCHANGE",
+			"user_id", user.ID,
 			"error", err.Error(),
 		)
 		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to generate access token")
 	}
 
-	access := &entity.OAuthAccessToken{
-		ID:             uuid.Must(uuid.NewV7()),
-		TokenHash:      hash.HashSHA256(accessToken),
-		UserID:         u.ID,
-		OrganizationID: orgID,
-		ApplicationID:  app.ID,
-		Scopes:         oauthcode.Scopes,
-		ExpiresAt:      claims.ExpiresAt.Time,
-	}
-
-	if err := uc.oauthAccRepo.Create(ctx, access); err != nil {
-		uc.logger.Error(ctx, "failed to persist access token",
-			"action", "TOKEN",
-			"error", err.Error(),
-		)
-		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to persist access token")
-	}
-
 	refreshToken, err := uc.jwtSvc.GenerateRefreshToken()
 	if err != nil {
 		uc.logger.Error(ctx, "failed to generate refresh token",
-			"action", "TOKEN",
-			"user_id", u.ID,
+			"action", "EXCHANGE",
+			"user_id", user.ID,
 			"error", err.Error(),
 		)
 		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to generate refresh token")
 	}
 
 	refresh := &entity.OAuthRefreshToken{
-		ID:            uuid.Must(uuid.NewV7()),
-		AccessTokenID: access.ID,
-		TokenHash:     hash.HashSHA256(refreshToken),
-		ExpiresAt:     now.AddDate(0, 0, 30),
+		ID:             uuid.Must(uuid.NewV7()),
+		TokenHash:      hash.HashSHA256(refreshToken),
+		UserID:         user.ID,
+		ApplicationID:  app.ID,
+		OrganizationID: &org.ID,
+		Scopes:         oauthcode.Scopes,
+		CreatedAt:      now,
+		ExpiresAt:      now.AddDate(0, 0, 30),
 	}
 
 	if err := uc.oauthRefRepo.Create(ctx, refresh); err != nil {
 		uc.logger.Error(ctx, "failed to persist refresh token",
-			"action", "TOKEN",
+			"action", "EXCHANGE",
 			"error", err.Error(),
 		)
 		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to persist refresh token")
 	}
 
 	token := &ExchangeResult{
-		User:         u,
+		User:         user,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		Scope:        strings.Join(oauthcode.Scopes, " "),
-		IDToken:      refresh.AccessTokenID.String(),
+		IDToken:      idToken,
+		ExpiresIn:    int(expiresIn.Seconds()),
 	}
 
 	return token, nil
