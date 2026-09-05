@@ -108,7 +108,6 @@ func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (
 	hashedToken := hash.HashSHA256(token)
 	expiresIn := 15 * time.Minute
 
-	// TODO: Generate email verification token and send email
 	verifyToken := &entity.EmailVerificationToken{
 		ID:        uuid.Must(uuid.NewV7()),
 		UserID:    user.ID,
@@ -128,12 +127,9 @@ func (uc *registerUsecase) Execute(ctx context.Context, params RegisterParams) (
 
 	verifyURL := fmt.Sprintf("%s/verify-email?token=%s",
 		uc.cfg.Auth.OIDC.Issuer, token)
+	body := fmt.Sprintf(`<p>Click <a href="%s">here</a> to verify your email.</p>`, verifyURL)
 
-	to, subject, body := user.Email, "Verify your email",
-		fmt.Sprintf(`<p>Click <a href="%s">here</a> to verify your email.</p>`, verifyURL)
-
-	err = uc.emailSender.Send(ctx, to, subject, body)
-
+	err = uc.emailSender.Send(ctx, user.Email, "Verify your email", body)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to send verification email",
 			"action", "REGISTER",

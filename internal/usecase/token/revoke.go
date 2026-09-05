@@ -3,8 +3,6 @@ package token
 import (
 	"context"
 
-	"github.com/zencodecode/authorizer-service/internal/definition/enum"
-	"github.com/zencodecode/authorizer-service/internal/domain/apperr"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/application"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/oauthrefreshtoken"
 	"github.com/zencodecode/authorizer-service/internal/domain/service"
@@ -17,6 +15,9 @@ type (
 		TokenTypeHint string
 		ClientID      string
 		ClientSecret  string
+	}
+	RevokeResult struct {
+		Message string
 	}
 )
 
@@ -38,7 +39,11 @@ func NewRevokeUsecase(
 	}
 }
 
-func (uc *revokeUsecase) Execute(ctx context.Context, params RevokeParams) error {
+func (uc *revokeUsecase) Execute(ctx context.Context, params RevokeParams) (*RevokeResult, error) {
+	result := &RevokeResult{
+		Message: "token revocation process complete.",
+	}
+
 	app, err := uc.appRepo.GetByClientID(ctx, params.ClientID)
 	if err != nil {
 		uc.logger.Error(ctx, "failed to query applicaton",
@@ -46,11 +51,11 @@ func (uc *revokeUsecase) Execute(ctx context.Context, params RevokeParams) error
 			"client_id", &params.ClientID,
 			"error", err.Error(),
 		)
-		return apperr.NewDirectError(enum.SERVER_ERROR, "failed to query application")
+		return result, nil
 	}
 
 	if !hash.CheckHash(app.ClientSecretHash, params.ClientSecret) {
-		return apperr.NewDirectError(enum.INVALID_CLIENT, "invalid client credentials")
+		return result, nil
 	}
 
 	tokenHash := hash.HashSHA256(params.Token)
@@ -61,15 +66,15 @@ func (uc *revokeUsecase) Execute(ctx context.Context, params RevokeParams) error
 			"action", "REVOKE",
 			"client_id", params.ClientID,
 		)
-		return nil
+		return result, nil
 	}
 
 	if err := uc.oauthRefRepo.Revoke(ctx, refToken.ID); err != nil {
 		uc.logger.Error(ctx, "failed to revoke refresh token",
 			"action", "REVOKE",
 			"error", err.Error())
-		return apperr.NewDirectError(enum.SERVER_ERROR, "failed to revoke token")
+		return result, nil
 	}
 
-	return nil
+	return result, nil
 }

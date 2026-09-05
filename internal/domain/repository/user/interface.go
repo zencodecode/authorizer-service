@@ -13,6 +13,7 @@ type Repository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.User, error)
 	GetByEmail(ctx context.Context, email string) (*entity.User, error)
 	Update(ctx context.Context, user *entity.User) error
+	UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error
 	UpdateEmailVerified(ctx context.Context, id uuid.UUID, verifiedAt *time.Time) error
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
 	Delete(ctx context.Context, id uuid.UUID) error

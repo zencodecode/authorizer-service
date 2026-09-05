@@ -34,12 +34,13 @@ func (h *Handler) Revoke(c *gin.Context) {
 
 	params := toRevokeParams(req)
 
-	if err := h.revokeUC.Execute(c.Request.Context(), params); err != nil {
+	result, err := h.revokeUC.Execute(c.Request.Context(), params)
+	if err != nil {
 		_ = c.Error(err)
 		return
 	}
 
-	response.Success(c, "success", nil)
+	response.Success(c, result.Message, nil)
 }
 
 func toRevokeParams(r RevokeRequest) tokenuc.RevokeParams {

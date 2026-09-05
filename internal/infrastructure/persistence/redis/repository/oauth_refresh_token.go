@@ -33,6 +33,10 @@ func (r *oauthRefreshTokenRepository) userAppKey(userID, appID uuid.UUID) string
 	return fmt.Sprintf("refresh_token:user:%s:app:%s", userID.String(), appID.String())
 }
 
+func (r *oauthRefreshTokenRepository) userKey(userID uuid.UUID) string {
+	return fmt.Sprintf("refresh_token:user:%s", userID.String())
+}
+
 func (r *oauthRefreshTokenRepository) Create(ctx context.Context, token *entity.OAuthRefreshToken) error {
 	ttl := time.Until(token.ExpiresAt)
 	if ttl <= 0 {
@@ -82,6 +86,7 @@ func (r *oauthRefreshTokenRepository) Revoke(ctx context.Context, id uuid.UUID) 
 func (r *oauthRefreshTokenRepository) RevokeByAccessTokenID(ctx context.Context, accessTokenID uuid.UUID) error {
 	return nil
 }
+
 func (r *oauthRefreshTokenRepository) RevokeAllByUserAndApplication(ctx context.Context, userID, applicationID uuid.UUID) error {
 	setKey := r.userAppKey(userID, applicationID)
 	members, err := r.client.SMembers(ctx, setKey).Result()
@@ -99,6 +104,25 @@ func (r *oauthRefreshTokenRepository) RevokeAllByUserAndApplication(ctx context.
 	_, err = pipe.Exec(ctx)
 	return err
 }
+
+func (r *oauthRefreshTokenRepository) RevokeAllByUser(ctx context.Context, userID uuid.UUID) error {
+	setKey := r.userKey(userID)
+	members, err := r.client.SMembers(ctx, setKey).Result()
+	if err != nil {
+		return fmt.Errorf("get user refresh tokens: %w", err)
+	}
+	if len(members) == 0 {
+		return nil
+	}
+	pipe := r.client.Pipeline()
+	for _, tokenHash := range members {
+		pipe.Del(ctx, r.tokenHashKey(tokenHash))
+	}
+	pipe.Del(ctx, setKey)
+	_, err = pipe.Exec(ctx)
+	return err
+}
+
 func (r *oauthRefreshTokenRepository) DeleteExpired(_ context.Context, _ time.Time) error {
 	return nil
 }

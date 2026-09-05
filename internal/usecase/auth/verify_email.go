@@ -16,6 +16,9 @@ type (
 	VerifyEmailParams struct {
 		Token string
 	}
+	VerifyEmailResult struct {
+		Message string
+	}
 )
 
 type verifyEmailUsecase struct {
@@ -36,16 +39,16 @@ func NewVerifyEmailUsecase(
 	}
 }
 
-func (uc *verifyEmailUsecase) Execute(ctx context.Context, params VerifyEmailParams) error {
+func (uc *verifyEmailUsecase) Execute(ctx context.Context, params VerifyEmailParams) (*VerifyEmailResult, error) {
 	tokenHash := hash.HashSHA256(params.Token)
 
 	token, err := uc.verifRepo.GetByTokenHash(ctx, tokenHash)
 	if err != nil {
-		return apperr.NewDirectError(enum.INVALID_GRANT, "verification token is invalid")
+		return nil, apperr.NewDirectError(enum.INVALID_GRANT, "verification token is invalid")
 	}
 
 	if token.UsedAt != nil {
-		return apperr.NewDirectError(enum.INVALID_GRANT, "verification token has expired")
+		return nil, apperr.NewDirectError(enum.INVALID_GRANT, "verification token has expired")
 	}
 
 	if err := uc.verifRepo.MarkUsed(ctx, token.ID); err != nil {
@@ -54,7 +57,7 @@ func (uc *verifyEmailUsecase) Execute(ctx context.Context, params VerifyEmailPar
 			"user_id", token.UserID,
 			"error", err.Error(),
 		)
-		return apperr.NewDirectError(enum.SERVER_ERROR, "failed to process verification")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to process verification")
 	}
 
 	now := time.Now()
@@ -64,7 +67,7 @@ func (uc *verifyEmailUsecase) Execute(ctx context.Context, params VerifyEmailPar
 			"user_id", token.UserID,
 			"error", err.Error(),
 		)
-		return apperr.NewDirectError(enum.SERVER_ERROR, "failed to verify email")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to verify email")
 	}
 
 	if er := uc.userRepo.UpdateStatus(ctx, token.UserID, "active"); er != nil {
@@ -73,7 +76,7 @@ func (uc *verifyEmailUsecase) Execute(ctx context.Context, params VerifyEmailPar
 			"user_id", token.UserID,
 			"error", er.Error(),
 		)
-		return apperr.NewDirectError(enum.SERVER_ERROR, "failed to activate user account")
+		return nil, apperr.NewDirectError(enum.SERVER_ERROR, "failed to activate user account")
 	}
 
 	uc.logger.Info(ctx, "email verified successfully",
@@ -81,5 +84,7 @@ func (uc *verifyEmailUsecase) Execute(ctx context.Context, params VerifyEmailPar
 		"user_id", token.UserID,
 	)
 
-	return nil
+	return &VerifyEmailResult{
+		Message: "Email verified successfully",
+	}, nil
 }

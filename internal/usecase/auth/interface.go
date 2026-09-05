@@ -22,6 +22,12 @@ type (
 		Execute(ctx context.Context, params RegisterParams) (*RegisterResult, error)
 	}
 	VerifyEmailUsecase interface {
-		Execute(ctx context.Context, params VerifyEmailParams) error
+		Execute(ctx context.Context, params VerifyEmailParams) (*VerifyEmailResult, error)
+	}
+	ForgotPasswordUsecase interface {
+		Execute(ctx context.Context, params ForgotPasswordParams) (*ForgotPasswordResult, error)
+	}
+	ResetPasswordUsecase interface {
+		Execute(ctx context.Context, params ResetPasswordParams) (*ResetPasswordResult, error)
 	}
 )

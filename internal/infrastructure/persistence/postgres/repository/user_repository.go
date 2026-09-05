@@ -61,6 +61,13 @@ func (r *userRepository) UpdateEmailVerified(ctx context.Context, id uuid.UUID, 
 		Update("email_verified_at", verifiedAt).Error
 }
 
+func (r *userRepository) UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error {
+	return r.db.WithContext(ctx).
+		Model(&model.User{}).
+		Where("id = ?", id).
+		Update("password_hash", passwordHash).Error
+}
+
 func (r *userRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status string) error {
 	return r.db.WithContext(ctx).
 		Model(&model.User{}).

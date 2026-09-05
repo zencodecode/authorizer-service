@@ -9,15 +9,14 @@ import (
 	"github.com/zencodecode/authorizer-service/pkg/validation"
 )
 
-type (
-	VerifyEmailRequest struct {
-		Token string `query:"code" binding:"required"`
-	}
-)
+type ResetPasswordRequest struct {
+	Token       string `json:"token" validate:"required"`
+	NewPassword string `json:"new_password" validate:"required,min=8"`
+}
 
-func (h *Handler) VerifyEmail(c *gin.Context) {
-	var req VerifyEmailRequest
-	if err := c.ShouldBindQuery(&req); err != nil {
+func (h *Handler) ResetPassword(c *gin.Context) {
+	var req ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		_ = c.Error(apperr.NewDirectError(enum.INVALID_REQUEST, err.Error()))
 		return
 	}
@@ -31,15 +30,16 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 		return
 	}
 
-	params := auth.VerifyEmailParams{
-		Token: req.Token,
+	params := auth.ResetPasswordParams{
+		Token:       req.Token,
+		NewPassword: req.NewPassword,
 	}
 
-	result, err := h.verifyEmailUC.Execute(c.Request.Context(), params)
+	result, err := h.resetPasswordUC.Execute(c.Request.Context(), params)
 	if err != nil {
 		_ = c.Error(err)
 		return
 	}
 
-	response.Success(c, result.Message, nil)
+	response.Success(c, result.Message, result)
 }
