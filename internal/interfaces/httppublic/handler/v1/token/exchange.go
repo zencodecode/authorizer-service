@@ -47,19 +47,19 @@ func (h *Handler) Exchange(c *gin.Context) {
 
 	params := toExchangeParams(req)
 
-	output, err := h.exchangeUC.Execute(c.Request.Context(), params)
+	result, err := h.exchangeUC.Execute(c.Request.Context(), params)
 	if err != nil {
 		_ = c.Error(err)
 		return
 	}
 
 	res := ExchangeResponse{
-		AccessToken:  output.AccessToken,
+		AccessToken:  result.AccessToken,
 		TokenType:    "Bearer",
 		ExpiresIn:    900,
-		RefreshToken: output.RefreshToken,
-		Scope:        output.Scope,
-		IDToken:      output.IDToken,
+		RefreshToken: result.RefreshToken,
+		Scope:        result.Scope,
+		IDToken:      result.IDToken,
 	}
 	response.Success(c, "success", res)
 }

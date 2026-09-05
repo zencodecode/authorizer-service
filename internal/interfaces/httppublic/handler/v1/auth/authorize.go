@@ -29,13 +29,13 @@ func (h *Handler) Authorize(c *gin.Context) {
 
 	params := toAuthorizeParams(req)
 
-	output, err := h.authorizeUC.Execute(c.Request.Context(), params)
+	result, err := h.authorizeUC.Execute(c.Request.Context(), params)
 	if err != nil {
 		_ = c.Error(err)
 		return
 	}
 
-	c.Redirect(http.StatusFound, "/login?login_challenge="+output.LoginChallengeID)
+	c.Redirect(http.StatusFound, "/login?login_challenge="+result.LoginChallengeID)
 }
 
 func toAuthorizeParams(r AuthorizeRequest) auth.AuthorizeParams {

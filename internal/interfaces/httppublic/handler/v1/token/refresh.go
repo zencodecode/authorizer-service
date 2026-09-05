@@ -45,19 +45,19 @@ func (h *Handler) Refresh(c *gin.Context) {
 
 	params := toRefreshParams(req)
 
-	output, err := h.refreshUC.Execute(c.Request.Context(), params)
+	result, err := h.refreshUC.Execute(c.Request.Context(), params)
 	if err != nil {
 		_ = c.Error(err)
 		return
 	}
 
 	res := RefreshResponse{
-		AccessToken:  output.AccessToken,
+		AccessToken:  result.AccessToken,
 		TokenType:    "Bearer",
 		ExpiresIn:    900,
-		RefreshToken: output.RefreshToken,
-		Scope:        output.Scope,
-		IDToken:      output.IDToken,
+		RefreshToken: result.RefreshToken,
+		Scope:        result.Scope,
+		IDToken:      result.IDToken,
 	}
 	response.Success(c, "success", res)
 }

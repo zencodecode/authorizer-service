@@ -21,4 +21,7 @@ type (
 	RegisterUsecase interface {
 		Execute(ctx context.Context, params RegisterParams) (*RegisterResult, error)
 	}
+	VerifyEmailUsecase interface {
+		Execute(ctx context.Context, params VerifyEmailParams) error
+	}
 )

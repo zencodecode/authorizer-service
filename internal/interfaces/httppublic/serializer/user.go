@@ -6,15 +6,15 @@ import (
 )
 
 type User struct {
-	UserID uuid.UUID `json:"user_id"`
-	Email  string    `json:"email"`
-	Name   string    `json:"name"`
+	ID    uuid.UUID `json:"id"`
+	Email string    `json:"email"`
+	Name  string    `json:"name"`
 }
 
 func SerializeToUser(u entity.User) User {
 	return User{
-		UserID: u.ID,
-		Email:  u.Email,
-		Name:   u.Name,
+		ID:    u.ID,
+		Email: u.Email,
+		Name:  u.Name,
 	}
 }

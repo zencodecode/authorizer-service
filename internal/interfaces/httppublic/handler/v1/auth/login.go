@@ -49,28 +49,28 @@ func (h *Handler) Login(c *gin.Context) {
 
 	params := toLoginParams(req)
 
-	output, err := h.loginUC.Execute(c.Request.Context(), params)
+	result, err := h.loginUC.Execute(c.Request.Context(), params)
 	if err != nil {
 		_ = c.Error(err)
 		return
 	}
 
-	if output.NextStep == auth.CONSENT {
-		organizations := make([]serializer.Organization, 0, len(output.Organizations))
-		for _, org := range output.Organizations {
+	if result.NextStep == auth.CONSENT {
+		organizations := make([]serializer.Organization, 0, len(result.Organizations))
+		for _, org := range result.Organizations {
 			organizations = append(organizations, serializer.SerializeToOrganization(*org))
 		}
 
 		res := LoginResponse{
-			User:          serializer.SerializeToUser(*output.User),
+			User:          serializer.SerializeToUser(*result.User),
 			Organizations: organizations,
-			ChallengeID:   output.ChallengeID,
+			ChallengeID:   result.ChallengeID,
 		}
 
 		response.Success(c, "proceed to consent", res)
 		return
 	}
-	c.Redirect(http.StatusFound, *output.RedirectURL)
+	c.Redirect(http.StatusFound, *result.RedirectURL)
 }
 
 func toLoginParams(r LoginRequest) auth.LoginParams {

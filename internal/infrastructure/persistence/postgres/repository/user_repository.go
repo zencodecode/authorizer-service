@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
@@ -51,6 +52,20 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*entity.
 func (r *userRepository) Update(ctx context.Context, u *entity.User) error {
 	m := model.UserFromEntity(u)
 	return r.db.WithContext(ctx).Save(m).Error
+}
+
+func (r *userRepository) UpdateEmailVerified(ctx context.Context, id uuid.UUID, verifiedAt *time.Time) error {
+	return r.db.WithContext(ctx).
+		Model(&model.User{}).
+		Where("id = ?", id).
+		Update("email_verified_at", verifiedAt).Error
+}
+
+func (r *userRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status string) error {
+	return r.db.WithContext(ctx).
+		Model(&model.User{}).
+		Where("id = ?", id).
+		Update("status", status).Error
 }
 
 func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
