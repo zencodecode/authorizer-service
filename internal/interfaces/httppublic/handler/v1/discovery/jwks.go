@@ -7,6 +7,6 @@ import (
 )
 
 func (h *Handler) JWKS(c *gin.Context) {
-	jwks := auth.BuildJWKS(h.cfg.Auth.JWT.PublicKey, h.cfg.Auth.JWT.KeyID)
+	jwks := auth.BuildJWKS(h.publicKey, h.keyID)
 	response.Success(c, "get jwks succceed", jwks)
 }

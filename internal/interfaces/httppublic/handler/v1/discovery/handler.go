@@ -1,21 +1,23 @@
 package discovery
 
 import (
-	"github.com/zencodecode/authorizer-service/internal/config"
-	"github.com/zencodecode/authorizer-service/internal/domain/service"
+	"crypto/rsa"
 )
 
 type Handler struct {
-	cfg    *config.Config
-	logger service.Logger
+	publicKey *rsa.PublicKey
+	keyID     string
+	issuer    string
 }
 
 func New(
-	cfg *config.Config,
-	logger service.Logger,
+	publicKey *rsa.PublicKey,
+	keyID string,
+	issuer string,
 ) *Handler {
 	return &Handler{
-		cfg:    cfg,
-		logger: logger,
+		publicKey: publicKey,
+		keyID:     keyID,
+		issuer:    issuer,
 	}
 }

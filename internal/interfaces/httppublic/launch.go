@@ -15,10 +15,16 @@ import (
 
 // @title   Log Service API
 // @version 1.0.0
+// @description OAuth2/OIDC Authorization Server API
+
 // @contact.name  Zencode
+
 // @license.name Apache 2.0
 // @license.url  http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8080
 // @BasePath /api
+
 // @securityDefinitions.apikey BearerAccessToken
 // @in header
 // @name Authorization

@@ -54,8 +54,8 @@ type exchangeUsecase struct {
 	rolePermRepo  rolepermission.Repository
 	oauthRefRepo  oauthrefreshtoken.Repository
 	jwtSvc        service.JWTService
-	logger        service.Logger
 	issuerURL     string
+	logger        service.Logger
 }
 
 func NewExchangeUsecase(
@@ -69,8 +69,8 @@ func NewExchangeUsecase(
 	rolePermRepo rolepermission.Repository,
 	oauthRefRepo oauthrefreshtoken.Repository,
 	jwtSvc service.JWTService,
-	logger service.Logger,
 	issuerURL string,
+	logger service.Logger,
 ) ExchangeUsecase {
 	return &exchangeUsecase{
 		userRepo:      userRepo,
@@ -83,8 +83,8 @@ func NewExchangeUsecase(
 		rolePermRepo:  rolePermRepo,
 		oauthRefRepo:  oauthRefRepo,
 		jwtSvc:        jwtSvc,
-		logger:        logger,
 		issuerURL:     issuerURL,
+		logger:        logger,
 	}
 }
 

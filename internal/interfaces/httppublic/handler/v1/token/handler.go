@@ -8,21 +8,21 @@ import (
 
 type Handler struct {
 	exchangeUC token.ExchangeUsecase
-	revokeUC   token.RevokeUsecase
 	refreshUC  token.RefreshUsecase
+	revokeUC   token.RevokeUsecase
 	logger     service.Logger
 }
 
 func New(
 	exchangeUC token.ExchangeUsecase,
-	revokeUC token.RevokeUsecase,
 	refreshUC token.RefreshUsecase,
+	revokeUC token.RevokeUsecase,
 	logger service.Logger,
 ) *Handler {
 	return &Handler{
 		exchangeUC: exchangeUC,
-		revokeUC:   revokeUC,
 		refreshUC:  refreshUC,
+		revokeUC:   revokeUC,
 		logger:     logger,
 	}
 }

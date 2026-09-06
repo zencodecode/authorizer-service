@@ -15,7 +15,6 @@ import (
 
 type jwtService struct {
 	privateKey *rsa.PrivateKey
-	publicKey  *rsa.PublicKey
 	keyID      string
 	expiry     time.Duration
 }
@@ -23,7 +22,6 @@ type jwtService struct {
 func NewJWTService(privateKey *rsa.PrivateKey, keyID string, expiry time.Duration) service.JWTService {
 	return &jwtService{
 		privateKey: privateKey,
-		publicKey:  &privateKey.PublicKey,
 		keyID:      keyID,
 		expiry:     expiry,
 	}
@@ -47,7 +45,7 @@ func (s *jwtService) ValidateAccessToken(_ context.Context, tokenString string) 
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
-		return s.publicKey, nil
+		return &s.privateKey.PublicKey, nil
 	})
 	if err != nil {
 		return nil, err

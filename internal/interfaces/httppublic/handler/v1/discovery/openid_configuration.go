@@ -7,6 +7,6 @@ import (
 )
 
 func (h *Handler) OpenIDConfiguration(c *gin.Context) {
-	openID := auth.BuildOpenIDConfiguration(h.cfg.Auth.OIDC.Issuer)
+	openID := auth.BuildOpenIDConfiguration(h.issuer)
 	response.Success(c, "discovery succceed", openID)
 }
