@@ -8,6 +8,7 @@ import (
 	"github.com/zencodecode/authorizer-service/internal/infrastructure/driver/database"
 	"github.com/zencodecode/authorizer-service/internal/infrastructure/driver/email"
 	"github.com/zencodecode/authorizer-service/internal/infrastructure/driver/rabbitmq"
+	emailevent "github.com/zencodecode/authorizer-service/internal/interfaces/event/email"
 	"gorm.io/gorm"
 
 	// PostgreSQL repositories
@@ -94,6 +95,8 @@ func (c *Container) Build(db *gorm.DB, redisClient *redis.Client) {
 	// ──────── Email Sender ────────
 	emailChan := c.Amqp.Channel()
 	emailPublisher, _ := email.NewPublisher(emailChan, c.Logger)
+	smtpSender := email.NewSMTPSender(c.Config.SMTP)
+	_ = emailevent.NewConsumer(emailChan, smtpSender, c.Logger)
 
 	// ──────── Usecases — Auth (Public) ────────
 	issuerURL := c.Config.Auth.OIDC.Issuer
