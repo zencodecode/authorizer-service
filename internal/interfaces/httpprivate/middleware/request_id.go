@@ -5,7 +5,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func RequestIDMiddleware() gin.HandlerFunc {
+func RequestID() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		requestID := c.GetHeader("X-Request-ID")
 
