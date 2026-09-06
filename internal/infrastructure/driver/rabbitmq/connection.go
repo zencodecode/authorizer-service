@@ -64,8 +64,18 @@ func (cn *Connection) Connect(ctx context.Context) error {
 	return nil
 }
 
+// Channel returns the default channel created during Connect().
 func (cn *Connection) Channel() *amqp.Channel {
 	return cn.ch
+}
+
+// NewChannel creates a new independent channel from the same connection.
+// Useful when publisher and consumer need separate channels.
+func (cn *Connection) NewChannel() (*amqp.Channel, error) {
+	if cn.conn == nil {
+		return nil, fmt.Errorf("rabbitmq connection is not initialized")
+	}
+	return cn.conn.Channel()
 }
 
 func (cn *Connection) Close() error {
