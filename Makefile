@@ -13,6 +13,12 @@ MIGRATION_PATH := internal/infrastructure/persistence/postgres/migrations
 local-http-public:
 	INTERFACE=HTTP_PUBLIC air
 
+local-event:
+	INTERFACE=EVENT air
+
+local:
+	make local-http-public & make local-event
+
 migrate-create:
 	$(MIGRATE) create -ext sql -dir $(MIGRATION_PATH) -seq $(MIGRATION_NAME)
 
