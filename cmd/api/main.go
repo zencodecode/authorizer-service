@@ -47,6 +47,11 @@ func run() error {
 	logger.Info(connectCtx, "database connections established")
 
 	amqp := rabbitmq.NewConnection(cfg.RabbitMQ, logger)
+	if err := amqp.Connect(connectCtx); err != nil {
+		return fmt.Errorf("initialize rabbitmq connection: %w", err)
+	}
+	logger.Info(connectCtx, "rabbitmq connection established")
+
 	container := bootstrap.NewContainer(cfg, connManager, amqp, logger)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -61,21 +66,33 @@ func run() error {
 		})
 
 	case "HTTP_PRIVATE":
-		// container.Build(db, redisClient)
-		// httpprivate.Launch(ctx, container)
+		// container.Build(connManager.Postgres.GetClient(), connManager.Redis.GetClient())
+		// g.Go(func() error {
+		// 	return httpprivate.Launch(gCtx, container)
+		// })
 
 	case "EVENT":
-		event.Launch(ctx, container)
+		g.Go(func() error {
+			return event.Launch(gCtx, container)
+		})
+
+	default:
+		return fmt.Errorf("unknown INTERFACE: %q", os.Getenv("INTERFACE"))
 	}
 
 	serviceErr := g.Wait()
 	if serviceErr != nil {
-		logger.Error(gCtx, "service exited with error", "error", serviceErr.Error())
+		logger.Error(ctx, "service exited with error", "error", serviceErr.Error())
 	}
 
 	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 15*time.Second)
-	logger.Info(shutdownCtx, "shutting down database connections...")
 	defer cancelShutdown()
+
+	logger.Info(shutdownCtx, "shutting down connections...")
+
+	if err := amqp.Close(); err != nil {
+		logger.Error(shutdownCtx, "rabbitmq shutdown error", "error", err.Error())
+	}
 
 	if shutdownErr := connManager.Shutdown(shutdownCtx); shutdownErr != nil {
 		logger.Error(shutdownCtx, "database shutdown error", "error", shutdownErr.Error())
