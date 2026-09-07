@@ -21,9 +21,9 @@ import (
 	userUC "github.com/zencodecode/authorizer-service/internal/usecase/user"
 
 	// Handlers
-	authHandler "github.com/zencodecode/authorizer-service/internal/interfaces/httppublic/handler/v1/auth"
-	discoveryHandler "github.com/zencodecode/authorizer-service/internal/interfaces/httppublic/handler/v1/discovery"
-	tokenHandler "github.com/zencodecode/authorizer-service/internal/interfaces/httppublic/handler/v1/token"
+	authHandler "github.com/zencodecode/authorizer-service/internal/interfaces/httppublic/handler/auth"
+	discoveryHandler "github.com/zencodecode/authorizer-service/internal/interfaces/httppublic/handler/discovery"
+	tokenHandler "github.com/zencodecode/authorizer-service/internal/interfaces/httppublic/handler/token"
 	// Private handlers
 	// userPrivHandler "github.com/zencodecode/authorizer-service/internal/interfaces/httpprivate/handler/v1/user"
 )

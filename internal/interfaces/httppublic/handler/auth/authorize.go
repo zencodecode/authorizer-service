@@ -20,6 +20,18 @@ type AuthorizeRequest struct {
 	CodeChallengeMethod string `form:"code_challenge_method" binding:"required"`
 }
 
+// Authorize godoc
+// @Summary Authorize user
+// @Description Generate authorization code
+// @Tags Authorize
+// @Accept json
+// @Produce json
+// @Security BearerAccessToken
+// @Param request body AuthorizeRequest true "Authorize payload"
+// @Success 200 {object} AuthorizeResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router /Authorize [post]
 func (h *Handler) Authorize(c *gin.Context) {
 	var req AuthorizeRequest
 	if err := c.ShouldBindQuery(&req); err != nil {

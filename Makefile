@@ -10,8 +10,8 @@ BUILD_TIME := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 DB_URL = postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DATABASE)?sslmode=$(POSTGRES_SSLMODE)
 MIGRATION_PATH := internal/infrastructure/persistence/postgres/migrations
 
-local-http-private:
-	air
+local-http-public:
+	INTERFACE=HTTP_PUBLIC air
 
 migrate-create:
 	$(MIGRATE) create -ext sql -dir $(MIGRATION_PATH) -seq $(MIGRATION_NAME)

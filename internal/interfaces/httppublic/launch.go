@@ -1,15 +1,18 @@
-package httpprivate
+package httppublic
 
 import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/secure"
 	"github.com/gin-gonic/gin"
 	"github.com/zencodecode/authorizer-service/internal/bootstrap"
+	"github.com/zencodecode/authorizer-service/internal/infrastructure/httpserver"
 	"github.com/zencodecode/authorizer-service/internal/interfaces/httppublic/middleware"
+	oauth "github.com/zencodecode/authorizer-service/internal/interfaces/httppublic/router/v1"
 	"github.com/zencodecode/authorizer-service/pkg/response"
 )
 
@@ -40,8 +43,9 @@ func Launch(ctx context.Context, c *bootstrap.Container) error {
 		response.InternalServerError(gc, "internal server error")
 	}))
 	r.Use(middleware.OAuthErrorHandler())
-	// r.Use(middleware.RequestIDMiddleware())
-	// r.Use(middleware.AccessLoggerMiddleware(c.Logger))
+	// r.Use(pvtmdlwr.RequestID())
+	// r.Use(pvtmdlwr.AccessLog(c.Logger))
+
 	r.Use(secure.New(secure.Config{
 		SSLRedirect:        c.Config.Interfaces.HTTPPublic.Environment == "production",
 		ContentTypeNosniff: true,
@@ -74,7 +78,7 @@ func Launch(ctx context.Context, c *bootstrap.Container) error {
 		})
 	})
 
-	// basePath := r.Group(c.Config.Interfaces.HTTPPublic.BasePath)
+	public := r.Group("")
 	// if os.Getenv("ENVIRONMENT") != "production" {
 	// 	docsGroup := basePath.Group("/api-docs")
 	// 	docsGroup.Use(gin.BasicAuth(gin.Accounts{
@@ -83,25 +87,17 @@ func Launch(ctx context.Context, c *bootstrap.Container) error {
 	// 	docsGroup.GET("/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	// }
 
-	// basePath.GET("", func(gc *gin.Context) {
-	// 	gc.String(200, fmt.Sprintf("API %s for %s",
-	// 		stringopr.ToCapitalCase(envutil.Get("INTERFACE", "log-service")),
-	// 		c.Config.Interfaces.HTTPPublic.Environment),
-	// 	)
-	// })
+	v1 := oauth.SetupRouter(c, public)
+	v1.MountOIDC()
+	v1.MountOAuth2()
 
-	// v1 := v1.New(c, basePath.Group("/v1"))
-	// v1.MountPing()
-	// v1.MountAuth()
+	srv := &http.Server{
+		Addr:         fmt.Sprintf(":%s", c.Config.Interfaces.HTTPPublic.Port),
+		Handler:      r,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
 
-	// srv := &http.Server{
-	// 	Addr:         fmt.Sprintf(":%s", c.Config.Interfaces.HttpPrivate.Port),
-	// 	Handler:      r,
-	// 	ReadTimeout:  15 * time.Second,
-	// 	WriteTimeout: 30 * time.Second,
-	// 	IdleTimeout:  60 * time.Second,
-	// }
-
-	// return httpserver.Run(ctx, srv, c.Logger, "http-private")
-	return nil
+	return httpserver.Run(ctx, srv, c.Logger, "http-private")
 }
