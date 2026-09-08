@@ -16,7 +16,7 @@ import (
 	appLog "github.com/zencodecode/authorizer-service/internal/infrastructure/driver/logger"
 	"github.com/zencodecode/authorizer-service/internal/infrastructure/driver/rabbitmq"
 	"github.com/zencodecode/authorizer-service/internal/interfaces/event"
-	"github.com/zencodecode/authorizer-service/internal/interfaces/httppublic"
+	httppublic "github.com/zencodecode/authorizer-service/internal/interfaces/http/public"
 	"golang.org/x/sync/errgroup"
 )
 

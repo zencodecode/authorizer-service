@@ -10,9 +10,9 @@ import (
 	"github.com/gin-contrib/secure"
 	"github.com/gin-gonic/gin"
 	"github.com/zencodecode/authorizer-service/internal/bootstrap"
-	"github.com/zencodecode/authorizer-service/internal/infrastructure/httpserver"
-	"github.com/zencodecode/authorizer-service/internal/interfaces/httppublic/middleware"
-	oauth "github.com/zencodecode/authorizer-service/internal/interfaces/httppublic/router/v1"
+	"github.com/zencodecode/authorizer-service/internal/interfaces/http/middleware"
+	oauth "github.com/zencodecode/authorizer-service/internal/interfaces/http/public/router/v1"
+	httpserver "github.com/zencodecode/authorizer-service/internal/interfaces/http/server"
 	"github.com/zencodecode/authorizer-service/pkg/response"
 )
 
