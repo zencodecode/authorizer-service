@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/zencodecode/authorizer-service/internal/definition/enum"
 	"github.com/zencodecode/authorizer-service/internal/domain/apperr"
-	"github.com/zencodecode/authorizer-service/internal/interfaces/http/public/serializer"
+	"github.com/zencodecode/authorizer-service/internal/interfaces/http/serializer"
 	"github.com/zencodecode/authorizer-service/internal/usecase/auth"
 	"github.com/zencodecode/authorizer-service/pkg/response"
 	"github.com/zencodecode/authorizer-service/pkg/validation"
