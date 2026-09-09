@@ -43,8 +43,8 @@ func Launch(ctx context.Context, c *bootstrap.Container) error {
 		response.InternalServerError(gc, "internal server error")
 	}))
 	r.Use(middleware.OAuthErrorHandler())
-	// r.Use(pvtmdlwr.RequestID())
-	// r.Use(pvtmdlwr.AccessLog(c.Logger))
+	r.Use(middleware.RequestID())
+	r.Use(middleware.AccessLog(c.Logger))
 
 	r.Use(secure.New(secure.Config{
 		SSLRedirect:        c.Config.Interfaces.HTTPPublic.Environment == "production",
