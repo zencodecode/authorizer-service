@@ -9,11 +9,15 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/secure"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/zencodecode/authorizer-service/internal/bootstrap"
 	"github.com/zencodecode/authorizer-service/internal/interfaces/http/middleware"
 	oauth "github.com/zencodecode/authorizer-service/internal/interfaces/http/public/router/v1"
 	httpserver "github.com/zencodecode/authorizer-service/internal/interfaces/http/server"
 	"github.com/zencodecode/authorizer-service/pkg/response"
+
+	_ "github.com/zencodecode/authorizer-service/docs/swagger"
 )
 
 // @title   Log Service API
@@ -79,13 +83,11 @@ func Launch(ctx context.Context, c *bootstrap.Container) error {
 	})
 
 	public := r.Group("")
-	// if os.Getenv("ENVIRONMENT") != "production" {
-	// 	docsGroup := basePath.Group("/api-docs")
-	// 	docsGroup.Use(gin.BasicAuth(gin.Accounts{
-	// 		"mika": "Merdeka2025!",
-	// 	}))
-	// 	docsGroup.GET("/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	// }
+
+	// Swagger UI (non-production only)
+	if c.Config.Interfaces.HTTPPublic.Environment != "production" {
+		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
 
 	v1 := oauth.SetupRouter(c, public)
 	v1.MountOIDC()
