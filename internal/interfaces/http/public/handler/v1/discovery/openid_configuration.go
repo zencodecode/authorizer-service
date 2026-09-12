@@ -8,5 +8,5 @@ import (
 
 func (h *Handler) OpenIDConfiguration(c *gin.Context) {
 	openID := auth.BuildOpenIDConfiguration(h.issuer)
-	response.Success(c, "discovery succceed", openID)
+	response.Success(c, "discovery succeed", openID)
 }

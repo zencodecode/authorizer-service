@@ -21,8 +21,8 @@ func SetupRouter(c *bootstrap.Container, group *gin.RouterGroup) *Router {
 
 func (r *Router) MountOIDC() {
 	oidc := r.group.Group("")
-	oidc.POST("/.well-known/openid-configuration", r.container.DiscoveryHandler.OpenIDConfiguration)
-	oidc.POST("/.well-known/jwks.json", r.container.DiscoveryHandler.JWKS)
+	oidc.GET("/.well-known/openid-configuration", r.container.DiscoveryHandler.OpenIDConfiguration)
+	oidc.GET("/.well-known/jwks.json", r.container.DiscoveryHandler.JWKS)
 }
 
 func (r *Router) MountOAuth2() {

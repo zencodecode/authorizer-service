@@ -27,11 +27,11 @@ type AuthorizeRequest struct {
 // @Accept json
 // @Produce json
 // @Security BearerAccessToken
-// @Param request body AuthorizeRequest true "Authorize payload"
-// @Router /authorize [post]
+// @Param request formData AuthorizeRequest true "Authorize payload"
+// @Router /oauth2/authorize [get]
 func (h *Handler) Authorize(c *gin.Context) {
 	var req AuthorizeRequest
-	if err := c.ShouldBindQuery(&req); err != nil {
+	if err := c.ShouldBind(&req); err != nil {
 		_ = c.Error(apperr.NewDirectError(enum.INVALID_REQUEST, err.Error()))
 		return
 	}

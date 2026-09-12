@@ -2,7 +2,7 @@ package service
 
 import "context"
 
-type permissionDef struct {
+type PermissionDef struct {
 	Slug        string
 	Resource    string
 	Action      string
@@ -10,7 +10,7 @@ type permissionDef struct {
 }
 
 // defaultPermissions adalah daftar semua permissions yang di-seed untuk Application "AUTHORIZER".
-var DefaultPermissions = []permissionDef{
+var DefaultPermissions = []PermissionDef{
 	// User
 	{Slug: "user.create", Resource: "user", Action: "create", Description: "Create new users"},
 	{Slug: "user.read", Resource: "user", Action: "read", Description: "View user details"},
@@ -34,6 +34,19 @@ var DefaultPermissions = []permissionDef{
 	{Slug: "organization.create", Resource: "organization", Action: "create", Description: "Create new organizations"},
 	{Slug: "organization.read", Resource: "organization", Action: "read", Description: "View organization details"},
 	{Slug: "organization.update", Resource: "organization", Action: "update", Description: "Update organization information"},
+}
+
+type ScopeDef struct {
+	Scope       string
+	Description string
+}
+
+var DefaultScopes = []ScopeDef{
+	{Scope: "openid", Description: ""},
+	{Scope: "profile", Description: ""},
+	{Scope: "email", Description: ""},
+	{Scope: "authorizer.read", Description: ""},
+	{Scope: "authorizer.write", Description: ""},
 }
 
 type SeederParams struct {

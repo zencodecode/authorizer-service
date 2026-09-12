@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/application"
+	"github.com/zencodecode/authorizer-service/internal/domain/repository/applicationscope"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/permission"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/role"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/rolepermission"
@@ -21,6 +22,7 @@ import (
 type seederService struct {
 	userRepo     user.Repository
 	appRepo      application.Repository
+	appScopeRepo applicationscope.Repository
 	roleRepo     role.Repository
 	permRepo     permission.Repository
 	rolePermRepo rolepermission.Repository
@@ -31,6 +33,7 @@ type seederService struct {
 func NewSeederService(
 	userRepo user.Repository,
 	appRepo application.Repository,
+	appScope applicationscope.Repository,
 	roleRepo role.Repository,
 	permRepo permission.Repository,
 	rolePermRepo rolepermission.Repository,
@@ -40,6 +43,7 @@ func NewSeederService(
 	return &seederService{
 		userRepo:     userRepo,
 		appRepo:      appRepo,
+		appScopeRepo: appScope,
 		roleRepo:     roleRepo,
 		permRepo:     permRepo,
 		rolePermRepo: rolePermRepo,
@@ -49,36 +53,34 @@ func NewSeederService(
 }
 
 func (uc *seederService) Seed(ctx context.Context, params service.SeederParams) error {
-	// ──────── Step 1: Application "AUTHORIZER" ────────
 	app, err := uc.seedApplication(ctx, params.AppClientSecret)
 	if err != nil {
 		return fmt.Errorf("seed application: %w", err)
 	}
 
-	// ──────── Step 2: Permissions ────────
+	if err := uc.seedApplicationScopes(ctx, app.ID); err != nil {
+		return fmt.Errorf("seed application scopes: %w", err)
+	}
+
 	permIDs, err := uc.seedPermissions(ctx, app.ID)
 	if err != nil {
 		return fmt.Errorf("seed permissions: %w", err)
 	}
 
-	// ──────── Step 3: Role "SUPER_ADMIN" ────────
 	superAdminRole, err := uc.seedRole(ctx, app.ID)
 	if err != nil {
 		return fmt.Errorf("seed role: %w", err)
 	}
 
-	// ──────── Step 4: RolePermissions ────────
 	if err := uc.seedRolePermissions(ctx, superAdminRole.ID, permIDs); err != nil {
 		return fmt.Errorf("seed role permissions: %w", err)
 	}
 
-	// ──────── Step 5: Admin User ────────
 	adminUser, err := uc.seedAdminUser(ctx, params)
 	if err != nil {
 		return fmt.Errorf("seed admin user: %w", err)
 	}
 
-	// ──────── Step 6: UserRole Assignment ────────
 	if err := uc.seedUserRole(ctx, adminUser.ID, superAdminRole.ID); err != nil {
 		return fmt.Errorf("seed user role: %w", err)
 	}
@@ -138,6 +140,37 @@ func (uc *seederService) seedApplication(ctx context.Context, clientSecret strin
 		"slug", app.Slug, "id", app.ID, "client_id", app.ClientID)
 
 	return app, nil
+}
+
+func (uc *seederService) seedApplicationScopes(ctx context.Context, appID uuid.UUID) error {
+	inserted := 0
+
+	for _, def := range service.DefaultScopes {
+		existing, err := uc.appScopeRepo.GetByApplicationAndScope(ctx, appID, def.Scope)
+		if err != nil && !errors.Is(err, applicationscope.ErrNotFound) {
+			return fmt.Errorf("lookup permission %s: %w", def.Scope, err)
+		}
+
+		if existing != nil {
+			continue
+		}
+
+		desc := def.Description
+		scope := &entity.ApplicationScope{
+			ID:            uuid.Must(uuid.NewV7()),
+			ApplicationID: appID,
+			Scope:         def.Scope,
+			Description:   &desc,
+		}
+
+		if err := uc.appScopeRepo.Create(ctx, scope); err != nil {
+			return fmt.Errorf("create permission %s: %w", def.Scope, err)
+		}
+		inserted++
+	}
+
+	uc.logger.Info(ctx, "permissions seeded", "inserted", inserted)
+	return nil
 }
 
 func (uc *seederService) seedPermissions(ctx context.Context, appID uuid.UUID) ([]uuid.UUID, error) {

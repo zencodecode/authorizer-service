@@ -1,30 +1,4 @@
 basePath: /api
-definitions:
-  internal_interfaces_http_public_handler_v1_auth.AuthorizeRequest:
-    properties:
-      client_id:
-        type: string
-      code_challenge:
-        type: string
-      code_challenge_method:
-        type: string
-      redirect_uri:
-        type: string
-      response_type:
-        type: string
-      scope:
-        type: string
-      state:
-        type: string
-    required:
-    - client_id
-    - code_challenge
-    - code_challenge_method
-    - redirect_uri
-    - response_type
-    - scope
-    - state
-    type: object
 host: localhost:8080
 info:
   contact:
@@ -36,18 +10,40 @@ info:
   title: Log Service API
   version: 1.0.0
 paths:
-  /authorize:
+  /oauth2/authorize:
     post:
       consumes:
       - application/json
       description: Generate authorization code
       parameters:
-      - description: Authorize payload
-        in: body
-        name: request
+      - in: formData
+        name: client_id
         required: true
-        schema:
-          $ref: '#/definitions/internal_interfaces_http_public_handler_v1_auth.AuthorizeRequest'
+        type: string
+      - in: formData
+        name: code_challenge
+        required: true
+        type: string
+      - in: formData
+        name: code_challenge_method
+        required: true
+        type: string
+      - in: formData
+        name: redirect_uri
+        required: true
+        type: string
+      - in: formData
+        name: response_type
+        required: true
+        type: string
+      - in: formData
+        name: scope
+        required: true
+        type: string
+      - in: formData
+        name: state
+        required: true
+        type: string
       produces:
       - application/json
       responses: {}

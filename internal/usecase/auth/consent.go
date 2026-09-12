@@ -10,7 +10,6 @@ import (
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/application"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/authorizesession"
-	"github.com/zencodecode/authorizer-service/internal/domain/repository/oauthauthorizationcode"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/organization"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/organizationapplication"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/organizationuser"
@@ -32,15 +31,14 @@ type (
 )
 
 type consentUsecase struct {
-	userRepo      user.Repository
-	orgUserRepo   organizationuser.Repository
-	orgAppRepo    organizationapplication.Repository
-	orgRepo       organization.Repository
-	appRepo       application.Repository
-	oauthCodeRepo oauthauthorizationcode.Repository
-	sessionRepo   authorizesession.Repository
-	authCodeSvc   service.AuthorizationCode
-	logger        service.Logger
+	userRepo    user.Repository
+	orgUserRepo organizationuser.Repository
+	orgAppRepo  organizationapplication.Repository
+	orgRepo     organization.Repository
+	appRepo     application.Repository
+	sessionRepo authorizesession.Repository
+	authCodeSvc service.AuthorizationCode
+	logger      service.Logger
 }
 
 func NewConsentUsecase(
@@ -49,21 +47,19 @@ func NewConsentUsecase(
 	orgAppRepo organizationapplication.Repository,
 	orgRepo organization.Repository,
 	appRepo application.Repository,
-	oauthCodeRepo oauthauthorizationcode.Repository,
 	sessionRepo authorizesession.Repository,
 	authCodeSvc service.AuthorizationCode,
 	logger service.Logger,
 ) ConsentUsecase {
 	return &consentUsecase{
-		userRepo:      userRepo,
-		orgUserRepo:   orgUserRepo,
-		orgAppRepo:    orgAppRepo,
-		orgRepo:       orgRepo,
-		appRepo:       appRepo,
-		oauthCodeRepo: oauthCodeRepo,
-		sessionRepo:   sessionRepo,
-		authCodeSvc:   authCodeSvc,
-		logger:        logger,
+		userRepo:    userRepo,
+		orgUserRepo: orgUserRepo,
+		orgAppRepo:  orgAppRepo,
+		orgRepo:     orgRepo,
+		appRepo:     appRepo,
+		sessionRepo: sessionRepo,
+		authCodeSvc: authCodeSvc,
+		logger:      logger,
 	}
 }
 

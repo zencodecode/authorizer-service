@@ -11,7 +11,6 @@ import (
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/application"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/auditlog"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/authorizesession"
-	"github.com/zencodecode/authorizer-service/internal/domain/repository/oauthauthorizationcode"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/organization"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/organizationuser"
 	"github.com/zencodecode/authorizer-service/internal/domain/repository/user"
@@ -41,15 +40,14 @@ type (
 )
 
 type loginUsecase struct {
-	userRepo      user.Repository
-	sessionRepo   authorizesession.Repository
-	appRepo       application.Repository
-	orgUserRepo   organizationuser.Repository
-	orgRepo       organization.Repository
-	oauthCodeRepo oauthauthorizationcode.Repository
-	auditLogRepo  auditlog.Repository
-	authCodeSvc   service.AuthorizationCode
-	logger        service.Logger
+	userRepo     user.Repository
+	sessionRepo  authorizesession.Repository
+	appRepo      application.Repository
+	orgUserRepo  organizationuser.Repository
+	orgRepo      organization.Repository
+	auditLogRepo auditlog.Repository
+	authCodeSvc  service.AuthorizationCode
+	logger       service.Logger
 }
 
 func NewLoginUsecase(
@@ -58,21 +56,19 @@ func NewLoginUsecase(
 	appRepo application.Repository,
 	orgUserRepo organizationuser.Repository,
 	orgRepo organization.Repository,
-	oauthCodeRepo oauthauthorizationcode.Repository,
 	auditLogRepo auditlog.Repository,
 	authCodeSvc service.AuthorizationCode,
 	logger service.Logger,
 ) LoginUsecase {
 	return &loginUsecase{
-		userRepo:      userRepo,
-		sessionRepo:   sessionRepo,
-		appRepo:       appRepo,
-		orgUserRepo:   orgUserRepo,
-		orgRepo:       orgRepo,
-		oauthCodeRepo: oauthCodeRepo,
-		auditLogRepo:  auditLogRepo,
-		authCodeSvc:   authCodeSvc,
-		logger:        logger,
+		userRepo:     userRepo,
+		sessionRepo:  sessionRepo,
+		appRepo:      appRepo,
+		orgUserRepo:  orgUserRepo,
+		orgRepo:      orgRepo,
+		auditLogRepo: auditLogRepo,
+		authCodeSvc:  authCodeSvc,
+		logger:       logger,
 	}
 }
 

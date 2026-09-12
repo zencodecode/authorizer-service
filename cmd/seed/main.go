@@ -56,12 +56,13 @@ func run() error {
 	db := pg.GetClient()
 	userRepo := pgRepo.NewUserRepository(db)
 	appRepo := pgRepo.NewApplicationRepository(db)
+	appScopeRepo := pgRepo.NewApplicationScopeRepository(db)
 	roleRepo := pgRepo.NewRoleRepository(db)
 	permRepo := pgRepo.NewPermissionRepository(db)
 	rolePermRepo := pgRepo.NewRolePermissionRepository(db)
 	userRoleRepo := pgRepo.NewUserRoleRepository(db)
 
-	uc := seedSvc.NewSeederService(userRepo, appRepo, roleRepo, permRepo, rolePermRepo, userRoleRepo, logger)
+	uc := seedSvc.NewSeederService(userRepo, appRepo, appScopeRepo, roleRepo, permRepo, rolePermRepo, userRoleRepo, logger)
 
 	if err := uc.Seed(ctx, service.SeederParams{
 		AdminEmail:      seedCfg.AdminEmail,

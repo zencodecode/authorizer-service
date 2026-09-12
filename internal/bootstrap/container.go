@@ -99,9 +99,9 @@ func (c *Container) Build(db *gorm.DB, redisClient *redis.Client) {
 	issuerURL := c.Config.Auth.OIDC.Issuer
 	authorizeUC := authUC.NewAuthorizeUsecase(appRepo, scopeRepo, sessionRepo, c.Logger)
 	loginUC := authUC.NewLoginUsecase(userRepo, sessionRepo, appRepo, orgUserRepo, orgRepo,
-		oauthCodeRepo, auditLogRepo, authCodeSvc, c.Logger)
+		auditLogRepo, authCodeSvc, c.Logger)
 	consentUC := authUC.NewConsentUsecase(userRepo, orgUserRepo, orgAppRepo, orgRepo, appRepo,
-		oauthCodeRepo, sessionRepo, authCodeSvc, c.Logger)
+		sessionRepo, authCodeSvc, c.Logger)
 	logoutUC := authUC.NewLogoutUsecase(userRepo, appRepo, oauthRefRepo, c.Logger)
 	userInfoUC := authUC.NewUserInfoUsecase(userRepo, c.Logger)
 	registerUC := authUC.NewRegisterUsecase(userRepo, verifRepo, emailPublisher, &c.Config, c.Logger)

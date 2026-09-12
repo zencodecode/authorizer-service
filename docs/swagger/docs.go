@@ -21,7 +21,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/authorize": {
+        "/oauth2/authorize": {
             "post": {
                 "security": [
                     {
@@ -41,53 +41,49 @@ const docTemplate = `{
                 "summary": "Authorize user",
                 "parameters": [
                     {
-                        "description": "Authorize payload",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/internal_interfaces_http_public_handler_v1_auth.AuthorizeRequest"
-                        }
+                        "type": "string",
+                        "name": "client_id",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "name": "code_challenge",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "name": "code_challenge_method",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "name": "redirect_uri",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "name": "response_type",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "name": "scope",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "name": "state",
+                        "in": "formData",
+                        "required": true
                     }
                 ],
                 "responses": {}
-            }
-        }
-    },
-    "definitions": {
-        "internal_interfaces_http_public_handler_v1_auth.AuthorizeRequest": {
-            "type": "object",
-            "required": [
-                "client_id",
-                "code_challenge",
-                "code_challenge_method",
-                "redirect_uri",
-                "response_type",
-                "scope",
-                "state"
-            ],
-            "properties": {
-                "client_id": {
-                    "type": "string"
-                },
-                "code_challenge": {
-                    "type": "string"
-                },
-                "code_challenge_method": {
-                    "type": "string"
-                },
-                "redirect_uri": {
-                    "type": "string"
-                },
-                "response_type": {
-                    "type": "string"
-                },
-                "scope": {
-                    "type": "string"
-                },
-                "state": {
-                    "type": "string"
-                }
             }
         }
     },
