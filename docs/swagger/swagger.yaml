@@ -1,0 +1,64 @@
+basePath: /api
+definitions:
+  internal_interfaces_http_public_handler_v1_auth.AuthorizeRequest:
+    properties:
+      client_id:
+        type: string
+      code_challenge:
+        type: string
+      code_challenge_method:
+        type: string
+      redirect_uri:
+        type: string
+      response_type:
+        type: string
+      scope:
+        type: string
+      state:
+        type: string
+    required:
+    - client_id
+    - code_challenge
+    - code_challenge_method
+    - redirect_uri
+    - response_type
+    - scope
+    - state
+    type: object
+host: localhost:8080
+info:
+  contact:
+    name: Zencode
+  description: OAuth2/OIDC Authorization Server API
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Log Service API
+  version: 1.0.0
+paths:
+  /authorize:
+    post:
+      consumes:
+      - application/json
+      description: Generate authorization code
+      parameters:
+      - description: Authorize payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_public_handler_v1_auth.AuthorizeRequest'
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAccessToken: []
+      summary: Authorize user
+      tags:
+      - Authorize
+securityDefinitions:
+  BearerAccessToken:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

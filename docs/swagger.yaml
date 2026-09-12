@@ -1,0 +1,74 @@
+definitions:
+  auth.AuthorizeRequest:
+    properties:
+      client_id:
+        type: string
+      code_challenge:
+        type: string
+      code_challenge_method:
+        type: string
+      redirect_uri:
+        type: string
+      response_type:
+        type: string
+      scope:
+        type: string
+      state:
+        type: string
+    required:
+    - client_id
+    - code_challenge
+    - code_challenge_method
+    - redirect_uri
+    - response_type
+    - scope
+    - state
+    type: object
+  auth.AuthorizeResponse:
+    properties:
+      login_challenge:
+        type: string
+    type: object
+  auth.ErrorResponse:
+    properties:
+      error:
+        type: string
+      error_description:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /Authorize:
+    post:
+      consumes:
+      - application/json
+      description: Generate authorization code
+      parameters:
+      - description: Authorize payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.AuthorizeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.AuthorizeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      security:
+      - BearerAccessToken: []
+      summary: Authorize user
+      tags:
+      - Authorize
+swagger: "2.0"
