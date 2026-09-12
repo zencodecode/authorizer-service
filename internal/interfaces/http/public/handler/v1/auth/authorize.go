@@ -28,10 +28,7 @@ type AuthorizeRequest struct {
 // @Produce json
 // @Security BearerAccessToken
 // @Param request body AuthorizeRequest true "Authorize payload"
-// @Success 200 {object} AuthorizeResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 401 {object} ErrorResponse
-// @Router /Authorize [post]
+// @Router /authorize [post]
 func (h *Handler) Authorize(c *gin.Context) {
 	var req AuthorizeRequest
 	if err := c.ShouldBindQuery(&req); err != nil {

@@ -11,13 +11,12 @@ import (
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	_ "github.com/zencodecode/authorizer-service/docs/swagger"
 	"github.com/zencodecode/authorizer-service/internal/bootstrap"
 	"github.com/zencodecode/authorizer-service/internal/interfaces/http/middleware"
 	oauth "github.com/zencodecode/authorizer-service/internal/interfaces/http/public/router/v1"
 	httpserver "github.com/zencodecode/authorizer-service/internal/interfaces/http/server"
 	"github.com/zencodecode/authorizer-service/pkg/response"
-
-	_ "github.com/zencodecode/authorizer-service/docs/swagger"
 )
 
 // @title   Log Service API
@@ -84,7 +83,6 @@ func Launch(ctx context.Context, c *bootstrap.Container) error {
 
 	public := r.Group("")
 
-	// Swagger UI (non-production only)
 	if c.Config.Interfaces.HTTPPublic.Environment != "production" {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}

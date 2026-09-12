@@ -19,6 +19,11 @@ local-event:
 local:
 	make local-http-public & make local-event
 
+seed:
+	go run ./cmd/seed
+build-seed:
+	go build -ldflags "-X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X main.BuildTime=$(BUILD_TIME)" -o ./bin/seed ./cmd/seed
+
 migrate-create:
 	$(MIGRATE) create -ext sql -dir $(MIGRATION_PATH) -seq $(MIGRATION_NAME)
 migrate-up:
