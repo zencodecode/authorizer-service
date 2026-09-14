@@ -31,7 +31,7 @@ type AuthorizeRequest struct {
 // @Router /oauth2/authorize [get]
 func (h *Handler) Authorize(c *gin.Context) {
 	var req AuthorizeRequest
-	if err := c.ShouldBind(&req); err != nil {
+	if err := c.ShouldBindQuery(&req); err != nil {
 		_ = c.Error(apperr.NewDirectError(enum.INVALID_REQUEST, err.Error()))
 		return
 	}

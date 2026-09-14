@@ -135,7 +135,7 @@ func (uc *authorizeUsecase) Execute(ctx context.Context, params AuthorizeParams)
 		CodeChallengeMethod: params.CodeChallengeMethod,
 	}
 
-	if err := uc.sessionRepo.Save(ctx, challengeID, sess, 10*time.Minute); err != nil {
+	if err := uc.sessionRepo.Save(ctx, challengeID, sess, 30*time.Minute); err != nil {
 		uc.logger.Error(ctx, "failed to save authorize session",
 			"action", "AUTHORIZE",
 			"client_id", params.ClientID,

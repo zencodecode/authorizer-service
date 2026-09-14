@@ -14,9 +14,9 @@ import (
 
 type (
 	LoginRequest struct {
-		Email       string `json:"email" validate:"required"`
-		Password    string `json:"password" validate:"required"`
-		ChallengeID string `form:"login_challenge"`
+		Email       string `form:"email" binding:"required"`
+		Password    string `form:"password" binding:"required"`
+		ChallengeID string `form:"login_challenge" binding:"required"`
 	}
 
 	LoginResponse struct {
@@ -28,12 +28,8 @@ type (
 
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		_ = c.Error(apperr.NewDirectError(enum.INVALID_REQUEST, err.Error()))
-		return
-	}
 
-	if err := c.ShouldBindQuery(&req); err != nil {
+	if err := c.ShouldBind(&req); err != nil {
 		_ = c.Error(apperr.NewDirectError(enum.INVALID_REQUEST, err.Error()))
 		return
 	}
