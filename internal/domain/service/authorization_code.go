@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/zencodecode/authorizer-service/internal/domain/entity"
@@ -13,6 +14,7 @@ type IssueAuthorizationCodeParams struct {
 	UserID      uuid.UUID
 	AppID       uuid.UUID
 	OrgID       *uuid.UUID
+	CodeExpiry  time.Duration
 }
 
 type IssuedAuthorizationCode struct {

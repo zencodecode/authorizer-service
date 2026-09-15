@@ -47,6 +47,7 @@ type loginUsecase struct {
 	orgRepo      organization.Repository
 	auditLogRepo auditlog.Repository
 	authCodeSvc  service.AuthorizationCode
+	authCodeExp  time.Duration
 	logger       service.Logger
 }
 
@@ -58,6 +59,7 @@ func NewLoginUsecase(
 	orgRepo organization.Repository,
 	auditLogRepo auditlog.Repository,
 	authCodeSvc service.AuthorizationCode,
+	authCodeExp time.Duration,
 	logger service.Logger,
 ) LoginUsecase {
 	return &loginUsecase{
@@ -68,6 +70,7 @@ func NewLoginUsecase(
 		orgRepo:      orgRepo,
 		auditLogRepo: auditLogRepo,
 		authCodeSvc:  authCodeSvc,
+		authCodeExp:  authCodeExp,
 		logger:       logger,
 	}
 }
@@ -178,6 +181,7 @@ func (uc *loginUsecase) Execute(ctx context.Context, params LoginParams) (*Login
 		UserID:      u.ID,
 		AppID:       app.ID,
 		OrgID:       nil,
+		CodeExpiry:  uc.authCodeExp,
 	}
 
 	issued, err := uc.authCodeSvc.Issue(ctx, p)

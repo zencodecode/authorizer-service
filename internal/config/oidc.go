@@ -15,13 +15,13 @@ type OIDC struct {
 }
 
 func LoadOIDCConfig(jwtCfg JWT) (OIDC, error) {
-	issuer := envutil.Get("AUTH_ISSUER_URL", "")
+	issuer := envutil.Get("OAUTH_ISSUER_URL", "")
 	if issuer == "" {
-		return OIDC{}, fmt.Errorf("AUTH_ISSUER_URL must be set")
+		return OIDC{}, fmt.Errorf("OAUTH_ISSUER_URL must be set")
 	}
 
-	codeExpiry := envutil.GetDuration("AUTH_CODE_EXPIRY", 60*time.Second)
-	requirePKCE := envutil.GetAsBool("AUTH_REQUIRE_PKCE", true)
+	codeExpiry := envutil.GetDuration("OAUTH_CODE_EXPIRY", 60*time.Second)
+	requirePKCE := envutil.GetAsBool("OAUTH_REQUIRE_PKCE", true)
 
 	return OIDC{
 		JWT:                     jwtCfg,

@@ -47,7 +47,7 @@ type refreshUsecase struct {
 	permRepo     permission.Repository
 	oauthRefRepo oauthrefreshtoken.Repository
 	jwtSvc       service.JWTService
-	issuerURL    string
+	issuer       string
 	logger       service.Logger
 }
 
@@ -60,7 +60,7 @@ func NewRefreshUsecase(
 	permRepo permission.Repository,
 	oauthRefRepo oauthrefreshtoken.Repository,
 	jwtSvc service.JWTService,
-	issuerURL string,
+	issuer string,
 	logger service.Logger,
 ) RefreshUsecase {
 	return &refreshUsecase{
@@ -72,7 +72,7 @@ func NewRefreshUsecase(
 		permRepo:     permRepo,
 		oauthRefRepo: oauthRefRepo,
 		jwtSvc:       jwtSvc,
-		issuerURL:    issuerURL,
+		issuer:       issuer,
 		logger:       logger,
 	}
 }
@@ -154,7 +154,7 @@ func (uc *refreshUsecase) Execute(ctx context.Context, params RefreshParams) (*R
 	expiresIn := 15 * time.Minute
 	claims := &entity.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    uc.issuerURL,
+			Issuer:    uc.issuer,
 			Subject:   u.ID.String(),
 			Audience:  jwt.ClaimStrings{app.ClientID},
 			ExpiresAt: jwt.NewNumericDate(now.Add(expiresIn)),
@@ -209,7 +209,7 @@ func (uc *refreshUsecase) Execute(ctx context.Context, params RefreshParams) (*R
 	if slices.Contains(oldRefresh.Scopes, "openid") {
 		idClaims := &entity.IDTokenClaims{
 			RegisteredClaims: jwt.RegisteredClaims{
-				Issuer:    uc.issuerURL,
+				Issuer:    uc.issuer,
 				Subject:   u.ID.String(),
 				Audience:  jwt.ClaimStrings{app.ClientID},
 				ExpiresAt: jwt.NewNumericDate(now.Add(expiresIn)),

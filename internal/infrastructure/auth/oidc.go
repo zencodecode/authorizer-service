@@ -16,14 +16,14 @@ type OpenIDConfiguration struct {
 	IDTokenSigningAlgValuesSupported  []string `json:"id_token_signing_alg_values_supported"`
 }
 
-func BuildOpenIDConfiguration(issuerURL string) *OpenIDConfiguration {
+func BuildOpenIDConfiguration(issuer string) *OpenIDConfiguration {
 	return &OpenIDConfiguration{
-		Issuer:                            issuerURL,
-		AuthorizationEndpoint:             issuerURL + "/authorize",
-		TokenEndpoint:                     issuerURL + "/token",
-		UserinfoEndpoint:                  issuerURL + "/userinfo",
-		JwksURI:                           issuerURL + "/.well-known/jwks.json",
-		RevocationEndpoint:                issuerURL + "/revoke",
+		Issuer:                            issuer,
+		AuthorizationEndpoint:             issuer + "/authorize",
+		TokenEndpoint:                     issuer + "/token",
+		UserinfoEndpoint:                  issuer + "/userinfo",
+		JwksURI:                           issuer + "/.well-known/jwks.json",
+		RevocationEndpoint:                issuer + "/revoke",
 		ScopesSupported:                   []string{"openid", "profile", "email", "offline_access"},
 		ResponseTypesSupported:            []string{"code"},
 		GrantTypesSupported:               []string{"authorization_code", "refresh_token"},

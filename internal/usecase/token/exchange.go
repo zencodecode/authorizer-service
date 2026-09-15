@@ -54,7 +54,7 @@ type exchangeUsecase struct {
 	rolePermRepo  rolepermission.Repository
 	oauthRefRepo  oauthrefreshtoken.Repository
 	jwtSvc        service.JWTService
-	issuerURL     string
+	issuer        string
 	logger        service.Logger
 }
 
@@ -69,7 +69,7 @@ func NewExchangeUsecase(
 	rolePermRepo rolepermission.Repository,
 	oauthRefRepo oauthrefreshtoken.Repository,
 	jwtSvc service.JWTService,
-	issuerURL string,
+	issuer string,
 	logger service.Logger,
 ) ExchangeUsecase {
 	return &exchangeUsecase{
@@ -83,7 +83,7 @@ func NewExchangeUsecase(
 		rolePermRepo:  rolePermRepo,
 		oauthRefRepo:  oauthRefRepo,
 		jwtSvc:        jwtSvc,
-		issuerURL:     issuerURL,
+		issuer:        issuer,
 		logger:        logger,
 	}
 }
@@ -203,7 +203,7 @@ func (uc *exchangeUsecase) Execute(ctx context.Context, params ExchangeParams) (
 
 	claims := &entity.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    uc.issuerURL,
+			Issuer:    uc.issuer,
 			Subject:   user.ID.String(),
 			Audience:  jwt.ClaimStrings{app.ClientID},
 			ExpiresAt: jwt.NewNumericDate(now.Add(expiresIn)),
@@ -219,7 +219,7 @@ func (uc *exchangeUsecase) Execute(ctx context.Context, params ExchangeParams) (
 	if slices.Contains(oauthcode.Scopes, "openid") {
 		idClaims := &entity.IDTokenClaims{
 			RegisteredClaims: jwt.RegisteredClaims{
-				Issuer:    uc.issuerURL,
+				Issuer:    uc.issuer,
 				Subject:   user.ID.String(),
 				Audience:  jwt.ClaimStrings{app.ClientID},
 				ExpiresAt: jwt.NewNumericDate(now.Add(expiresIn)),

@@ -58,6 +58,14 @@ func NewContainer(cfg config.Config, cm *database.ConnectionManager, amqp *rabbi
 	}
 }
 func (c *Container) Build(db *gorm.DB, redisClient *redis.Client) {
+	// ──────── Config ────────
+	issuer := c.Config.Auth.OIDC.Issuer
+	authCodeExpiry := c.Config.Auth.OIDC.AuthorizationCodeExpiry
+	privateKey := c.Config.Auth.JWT.PrivateKey
+	publicKey := c.Config.Auth.JWT.PublicKey
+	keyID := c.Config.Auth.JWT.KeyID
+	tokenExpiry := c.Config.Auth.JWT.TokenExpiry
+
 	// ──────── Repositories (PostgreSQL) ────────
 	userRepo := pgRepo.NewUserRepository(db)
 	orgRepo := pgRepo.NewOrganizationRepository(db)
@@ -81,9 +89,9 @@ func (c *Container) Build(db *gorm.DB, redisClient *redis.Client) {
 
 	// ──────── Infrastructure Services ────────
 	jwtSvc := auth.NewJWTService(
-		c.Config.Auth.JWT.PrivateKey,
-		c.Config.Auth.JWT.KeyID,
-		c.Config.Auth.JWT.TokenExpiry,
+		privateKey,
+		keyID,
+		tokenExpiry,
 	)
 	c.JWTService = jwtSvc
 	authCodeSvc := auth.NewAuthorizationCode(oauthCodeRepo, sessionRepo)
@@ -96,10 +104,9 @@ func (c *Container) Build(db *gorm.DB, redisClient *redis.Client) {
 	emailPublisher, _ := email.NewPublisher(emailChan, c.Logger)
 
 	// ──────── Usecases — Auth (Public) ────────
-	issuerURL := c.Config.Auth.OIDC.Issuer
 	authorizeUC := authUC.NewAuthorizeUsecase(appRepo, scopeRepo, sessionRepo, c.Logger)
 	loginUC := authUC.NewLoginUsecase(userRepo, sessionRepo, appRepo, orgUserRepo, orgRepo,
-		auditLogRepo, authCodeSvc, c.Logger)
+		auditLogRepo, authCodeSvc, authCodeExpiry, c.Logger)
 	consentUC := authUC.NewConsentUsecase(userRepo, orgUserRepo, orgAppRepo, orgRepo, appRepo,
 		sessionRepo, authCodeSvc, c.Logger)
 	logoutUC := authUC.NewLogoutUsecase(userRepo, appRepo, oauthRefRepo, c.Logger)
@@ -111,9 +118,9 @@ func (c *Container) Build(db *gorm.DB, redisClient *redis.Client) {
 
 	// ──────── Usecases — Token (Public) ────────
 	exchangeUC := tokenUC.NewExchangeUsecase(userRepo, appRepo, oauthCodeRepo, orgRepo,
-		roleRepo, userRoleRepo, permRepo, rolePermRepo, oauthRefRepo, jwtSvc, issuerURL, c.Logger)
+		roleRepo, userRoleRepo, permRepo, rolePermRepo, oauthRefRepo, jwtSvc, issuer, c.Logger)
 	refreshUC := tokenUC.NewRefreshUsecase(userRepo, appRepo, orgRepo, userRoleRepo,
-		rolePermRepo, permRepo, oauthRefRepo, jwtSvc, issuerURL, c.Logger)
+		rolePermRepo, permRepo, oauthRefRepo, jwtSvc, issuer, c.Logger)
 	revokeUC := tokenUC.NewRevokeUsecase(appRepo, oauthRefRepo, c.Logger)
 
 	// ──────── Usecases — Admin (Private) ────────
@@ -121,9 +128,9 @@ func (c *Container) Build(db *gorm.DB, redisClient *redis.Client) {
 
 	// ──────── Handlers — Public ────────
 	c.DiscoveryHandler = discoveryHandler.New(
-		c.Config.Auth.JWT.PublicKey,
-		c.Config.Auth.JWT.KeyID,
-		c.Config.Auth.OIDC.Issuer,
+		publicKey,
+		keyID,
+		issuer,
 	)
 	c.AuthHandler = authHandler.New(authorizeUC, loginUC, consentUC, logoutUC, userInfoUC, registerUC,
 		verifyEmailUC, forgotPwdUC, resetPwdUC, jwtSvc, c.Logger)
