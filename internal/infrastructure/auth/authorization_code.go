@@ -47,7 +47,7 @@ func (s *authorizationCode) Issue(ctx context.Context, params service.IssueAutho
 		CodeChallenge:       params.Session.CodeChallenge,
 		CodeChallengeMethod: "S256",
 		Scopes:              params.Session.Scope,
-		ExpiresAt:           time.Now().Add(params.CodeExpiry * time.Second),
+		ExpiresAt:           time.Now().Add(params.CodeExpiry),
 	}
 
 	if err := s.oauthCodeRepo.Create(ctx, authCode); err != nil {
