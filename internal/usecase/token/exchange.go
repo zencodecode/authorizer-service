@@ -279,7 +279,7 @@ func (uc *exchangeUsecase) Execute(ctx context.Context, params ExchangeParams) (
 		TokenHash:      hash.HashSHA256(refreshToken),
 		UserID:         user.ID,
 		ApplicationID:  app.ID,
-		OrganizationID: &org.ID,
+		OrganizationID: orgID,
 		Scopes:         oauthcode.Scopes,
 		CreatedAt:      now,
 		ExpiresAt:      now.AddDate(0, 0, 30),

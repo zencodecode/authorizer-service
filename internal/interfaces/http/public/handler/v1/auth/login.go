@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -51,7 +52,8 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	if result.NextStep == auth.CONSENT {
+	switch result.NextStep {
+	case auth.CONSENT:
 		organizations := make([]serializer.Organization, 0, len(result.Organizations))
 		for _, org := range result.Organizations {
 			organizations = append(organizations, serializer.SerializeToOrganization(*org))
@@ -65,8 +67,19 @@ func (h *Handler) Login(c *gin.Context) {
 
 		response.Success(c, "proceed to consent", res)
 		return
+
+	case auth.REDIRECT:
+		if result.RedirectURL == nil {
+			_ = c.Error(apperr.NewDirectError(enum.SERVER_ERROR, err.Error()))
+			return
+		}
+		c.Redirect(http.StatusFound, *result.RedirectURL)
+		return
+
+	default:
+		_ = c.Error(apperr.NewDirectError(enum.SERVER_ERROR, fmt.Sprintf("unhandled next step: %s", result.NextStep)))
+		return
 	}
-	c.Redirect(http.StatusFound, *result.RedirectURL)
 }
 
 func toLoginParams(r LoginRequest) auth.LoginParams {
