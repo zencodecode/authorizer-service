@@ -68,7 +68,7 @@ func (r *Router) MountOAuth2() {
 	oauth2.POST("/password/reset", r.container.AuthHandler.ResetPassword)
 
 	oauth2.GET("/userinfo", middleware.JWTAuth(r.container.JWTService, r.container.Logger), r.container.AuthHandler.UserInfo)
-	oauth2.POST("/userinfo", middleware.JWTAuth(r.container.JWTService, r.container.Logger), r.container.AuthHandler.Logout)
+	oauth2.POST("/logout", middleware.JWTAuth(r.container.JWTService, r.container.Logger), r.container.AuthHandler.Logout)
 }
 
 func clientIDKeyFunc(c *gin.Context) string {
