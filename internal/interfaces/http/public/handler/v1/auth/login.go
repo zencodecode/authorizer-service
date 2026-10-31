@@ -74,7 +74,6 @@ func (h *Handler) Login(c *gin.Context) {
 			return
 		}
 		c.Redirect(http.StatusFound, *result.RedirectURL)
-		return
 
 	default:
 		_ = c.Error(apperr.NewDirectError(enum.SERVER_ERROR, fmt.Sprintf("unhandled next step: %s", result.NextStep)))
