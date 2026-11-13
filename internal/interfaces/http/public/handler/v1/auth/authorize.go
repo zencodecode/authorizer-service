@@ -27,7 +27,7 @@ type AuthorizeRequest struct {
 // @Accept json
 // @Produce json
 // @Security BearerAccessToken
-// @Param request formData AuthorizeRequest true "Authorize payload"
+// @Param request query AuthorizeRequest true "Authorize payload"
 // @Router /oauth2/authorize [get]
 func (h *Handler) Authorize(c *gin.Context) {
 	var req AuthorizeRequest
