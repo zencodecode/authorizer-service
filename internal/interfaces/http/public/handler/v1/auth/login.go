@@ -70,7 +70,7 @@ func (h *Handler) Login(c *gin.Context) {
 
 	case auth.REDIRECT:
 		if result.RedirectURL == nil {
-			_ = c.Error(apperr.NewDirectError(enum.SERVER_ERROR, err.Error()))
+			_ = c.Error(apperr.NewDirectError(enum.SERVER_ERROR, "missing redirect URL"))
 			return
 		}
 		c.Redirect(http.StatusFound, *result.RedirectURL)
