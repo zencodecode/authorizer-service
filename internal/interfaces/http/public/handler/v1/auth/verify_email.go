@@ -11,7 +11,7 @@ import (
 
 type (
 	VerifyEmailRequest struct {
-		Token string `query:"code" binding:"required"`
+		Token string `form:"token" binding:"required"`
 	}
 )
 
