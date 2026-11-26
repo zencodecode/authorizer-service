@@ -1,0 +1,12 @@
+# Keep secrets and local artefacts out of the build context.
+.git
+.github
+.kiro
+.air.toml
+.env
+.env.*
+*.pem
+*.key
+bin/
+build/
+tmp/

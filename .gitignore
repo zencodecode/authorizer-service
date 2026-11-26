@@ -24,9 +24,18 @@ profile.cov
 go.work
 go.work.sum
 
+# Build directories
+bin/
+build/
+tmp/
+
 # env file
 .env
 
 # Editor/IDE
 # .idea/
 # .vscode/
+.kiro
+
+# secret
+*.pem

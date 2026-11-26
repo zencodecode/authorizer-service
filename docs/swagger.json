@@ -1,0 +1,115 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "paths": {
+        "/Authorize": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAccessToken": []
+                    }
+                ],
+                "description": "Generate authorization code",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Authorize"
+                ],
+                "summary": "Authorize user",
+                "parameters": [
+                    {
+                        "description": "Authorize payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.AuthorizeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auth.AuthorizeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/auth.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/auth.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "auth.AuthorizeRequest": {
+            "type": "object",
+            "required": [
+                "client_id",
+                "code_challenge",
+                "code_challenge_method",
+                "redirect_uri",
+                "response_type",
+                "scope",
+                "state"
+            ],
+            "properties": {
+                "client_id": {
+                    "type": "string"
+                },
+                "code_challenge": {
+                    "type": "string"
+                },
+                "code_challenge_method": {
+                    "type": "string"
+                },
+                "redirect_uri": {
+                    "type": "string"
+                },
+                "response_type": {
+                    "type": "string"
+                },
+                "scope": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.AuthorizeResponse": {
+            "type": "object",
+            "properties": {
+                "login_challenge": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "error_description": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
